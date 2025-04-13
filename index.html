@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenFront Map Editor</title>
+    <!-- Load JSZip library (needed globally) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Link to the CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <button id="settingsButton" title="Toggle Settings Panel">⚙️</button>
+
+    <div id="settingsPanel"> <!-- Populated by JS --> </div>
+
+     <div id="main-container">
+        <h1>OpenFront Map Editor</h1>
+
+        <div id="controls"> <!-- Populated by JS --> </div>
+
+         <div id="top-info">
+            <div id="coordinateDisplay">X: ---, Y: ---</div>
+            <div id="status">Load a map image to begin...</div>
+         </div>
+
+        <div id="editor-area">
+            <div id="instructions"> <!-- Populated by JS --> </div>
+
+            <div id="canvas-container">
+                <canvas id="mapCanvas"> Canvas not supported. </canvas>
+                 <div id="inlineEditPanel">
+                     <label for="inlineEditName">Name:</label> <input type="text" id="inlineEditName">
+                     <label for="inlineEditStrength">Strength:</label> <input type="number" id="inlineEditStrength" min="0">
+                     <div> <button id="inlineEditSave">Save</button> <button id="inlineEditCancel">Cancel</button> </div>
+                 </div>
+            </div>
+
+             <div id="info-panel">
+                 <h3>Nation Info</h3>
+                 <div id="info-content">
+                     <!-- Flag Section -->
+                     <div id="info-flag-container">
+                         <img id="info-flag-preview" src="#" alt="Nation Flag Preview">
+                         <p id="info-flag-status">Flag status</p>
+                         <div id="info-flag-controls">
+                             <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml"> <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label> <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
+                         </div>
+                     </div>
+                     <p><strong>Name:</strong> <span id="info-name">--</span></p>
+                     <p><strong>Strength:</strong> <span id="info-strength">--</span></p>
+                     <p id="info-placeholder"><small><i>Select a nation on the map or list.</i></small></p>
+                 </div>
+                 <hr>
+                 <h4>Nation List (<span id="nationListCount">0</span>)</h4>
+                 <div id="nationListContainer"> <ul id="nationList"></ul> </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-overlay"> <div id="modal-dialog"> <h3 id="modal-title">Modal Title</h3> <p id="modal-message">Modal message goes here.</p> <div id="modal-input-container" style="display: none;"> <input type="text" id="modal-input"> </div> <div id="modal-buttons"> <button id="modal-cancel" style="display: none;">Cancel</button> <button id="modal-deny" style="display: none;">No</button> <button id="modal-confirm" style="display: none;">Yes</button> <button id="modal-ok">OK</button> </div> </div> </div>
+
+    <!-- Load the main JavaScript module -->
+    <script type="module" src="js/main.js"></script>
+
+</body>
+</html>
