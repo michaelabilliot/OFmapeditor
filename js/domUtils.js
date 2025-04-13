@@ -192,10 +192,7 @@ export function updateInfoPanel(nationIndex) {
 
 
 // --- Inline Editor ---
-// FIXED: Removed async and dynamic import, using static import for mapToCanvasCoords
 export function openInlineEditor(index, mapX, mapY) {
-    // mapToCanvasCoords is now imported statically at the top
-
     if (!cfg.inlineEditPanel || index < 0 || index >= cfg.nations.length) return;
     const nation = cfg.nations[index];
     if (!nation) return;
@@ -214,13 +211,13 @@ export function openInlineEditor(index, mapX, mapY) {
 
     if (!canvasRect) return; // Cannot position if canvas rect is unavailable
 
-    let panelX = canvasPos.x + (cfg.markerRadius + 15); // Use cfg.markerRadius
+    let panelX = canvasPos.x + (cfg.markerRadius() + 15); // Use getter cfg.markerRadius()
     let panelY = canvasPos.y + 5;
 
     // Adjust panel position if it goes off-screen
     if (cfg.canvasContainer) {
         if (panelX + panelWidth > cfg.canvasContainer.clientWidth - 10) {
-            panelX = canvasPos.x - panelWidth - (cfg.markerRadius + 15);
+            panelX = canvasPos.x - panelWidth - (cfg.markerRadius() + 15); // Use getter
         }
         if (panelY + panelHeight > cfg.canvasContainer.clientHeight - 10) {
             panelY = canvasPos.y - panelHeight - 5;
@@ -250,15 +247,19 @@ export function closeInlineEditor() {
 export function applySettings() {
     if (!cfg.markerSizeInput || !cfg.nationTextSizeInput || !cfg.flagSizeInput || !cfg.darkModeToggle) return;
 
-    // Update config values from inputs
-    cfg.markerRadius = parseInt(cfg.markerSizeInput.value, 10);
-    cfg.nationTextSize = parseInt(cfg.nationTextSizeInput.value, 10);
-    cfg.flagBaseDisplaySize = parseInt(cfg.flagSizeInput.value, 10);
+    // Update config values from inputs USING SETTERS
+    const newMarkerRadius = parseInt(cfg.markerSizeInput.value, 10);
+    const newNationTextSize = parseInt(cfg.nationTextSizeInput.value, 10);
+    const newFlagSize = parseInt(cfg.flagSizeInput.value, 10);
+
+    cfg.setMarkerRadius(newMarkerRadius);
+    cfg.setNationTextSize(newNationTextSize);
+    cfg.setFlagBaseDisplaySize(newFlagSize);
 
     // Update UI display values
-    if (cfg.markerSizeValue) cfg.markerSizeValue.textContent = cfg.markerRadius;
-    if (cfg.nationTextSizeValue) cfg.nationTextSizeValue.textContent = cfg.nationTextSize;
-    if (cfg.flagSizeValue) cfg.flagSizeValue.textContent = cfg.flagBaseDisplaySize;
+    if (cfg.markerSizeValue) cfg.markerSizeValue.textContent = newMarkerRadius;
+    if (cfg.nationTextSizeValue) cfg.nationTextSizeValue.textContent = newNationTextSize;
+    if (cfg.flagSizeValue) cfg.flagSizeValue.textContent = newFlagSize;
 
     // Apply dark mode class
     document.body.classList.toggle('dark-mode', cfg.darkModeToggle.checked);
@@ -270,10 +271,11 @@ export function applySettings() {
 export function saveSettings() {
     if (!cfg.darkModeToggle || !cfg.markerSizeInput || !cfg.nationTextSizeInput || !cfg.flagSizeInput) return;
     try {
-        localStorage.setItem('mapEditor_markerRadius', cfg.markerRadius.toString());
+        // Use getters to retrieve current values before saving
+        localStorage.setItem('mapEditor_markerRadius', cfg.markerRadius().toString());
         localStorage.setItem('mapEditor_darkMode', cfg.darkModeToggle.checked.toString());
-        localStorage.setItem('mapEditor_nationTextSize', cfg.nationTextSize.toString());
-        localStorage.setItem('mapEditor_flagBaseDisplaySize', cfg.flagBaseDisplaySize.toString());
+        localStorage.setItem('mapEditor_nationTextSize', cfg.nationTextSize().toString());
+        localStorage.setItem('mapEditor_flagBaseDisplaySize', cfg.flagBaseDisplaySize().toString());
     } catch (e) {
         console.warn("Could not save settings to localStorage:", e);
     }
@@ -286,8 +288,9 @@ export function loadSettings() {
         if (savedRadius !== null) {
             const radius = parseInt(savedRadius, 10);
             if (!isNaN(radius) && cfg.markerSizeInput && radius >= parseInt(cfg.markerSizeInput.min, 10) && radius <= parseInt(cfg.markerSizeInput.max, 10)) {
-                cfg.markerRadius = radius;
-                cfg.markerSizeInput.value = String(cfg.markerRadius); // Set input value as string
+                // Use SETTER
+                cfg.setMarkerRadius(radius);
+                cfg.markerSizeInput.value = String(radius); // Set input value as string
             }
         }
 
@@ -300,8 +303,9 @@ export function loadSettings() {
         if (savedTextSize !== null) {
              const size = parseInt(savedTextSize, 10);
              if (!isNaN(size) && cfg.nationTextSizeInput && size >= parseInt(cfg.nationTextSizeInput.min, 10) && size <= parseInt(cfg.nationTextSizeInput.max, 10)) {
-                 cfg.nationTextSize = size;
-                 cfg.nationTextSizeInput.value = String(cfg.nationTextSize); // Set input value as string
+                 // Use SETTER
+                 cfg.setNationTextSize(size);
+                 cfg.nationTextSizeInput.value = String(size); // Set input value as string
              }
         }
 
@@ -309,15 +313,18 @@ export function loadSettings() {
          if (savedFlagSize !== null) {
              const size = parseInt(savedFlagSize, 10);
              if (!isNaN(size) && cfg.flagSizeInput && size >= parseInt(cfg.flagSizeInput.min, 10) && size <= parseInt(cfg.flagSizeInput.max, 10)) {
-                 cfg.flagBaseDisplaySize = size;
-                 cfg.flagSizeInput.value = String(cfg.flagBaseDisplaySize); // Set input value as string
+                 // Use SETTER
+                 cfg.setFlagBaseDisplaySize(size);
+                 cfg.flagSizeInput.value = String(size); // Set input value as string
              }
          }
 
     } catch (e) {
         console.warn("Could not load settings from localStorage:", e);
     } finally {
-        applySettings(); // Apply loaded (or default) settings and redraw
+        // Apply settings (including dark mode and updating text displays)
+        // This will use the values just set via setters (or defaults if loading failed)
+        applySettings();
     }
 }
 

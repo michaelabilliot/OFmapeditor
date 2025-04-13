@@ -12,9 +12,9 @@ export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContai
 export let controlsDiv, instructionsDiv; // Added for populating HTML
 
 // --- State Variables ---
-export let markerRadius = 8;
-export let nationTextSize = 12;
-export let flagBaseDisplaySize = 30;
+let _markerRadius = 8;
+let _nationTextSize = 12;
+let _flagBaseDisplaySize = 30;
 export let nations = []; // { coordinates: [x, y], name: "", strength: 0, flag: "base_name" | null, flagImage: Image | null, flagData: string | null, flagDataType: 'svg' | 'png' | null, flagWidth: number | null, flagHeight: number | null }
 export let mapImage = null; // Holds the *colorized* map image
 export let mapInfo = { name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" };
@@ -38,6 +38,12 @@ export let dragNationOffset = { x: 0, y: 0 };
 export const panThreshold = 5;
 export let currentModalResolve = null;
 export let isPanningAnimationActive = false;
+
+// --- Getters for state variables that need setters ---
+// This allows reading them directly like cfg.markerRadius
+export const markerRadius = () => _markerRadius;
+export const nationTextSize = () => _nationTextSize;
+export const flagBaseDisplaySize = () => _flagBaseDisplaySize;
 
 // --- Function to assign elements after DOM load ---
 export function assignElements() {
@@ -103,8 +109,10 @@ export function assignElements() {
     flagSizeValue = document.getElementById('flagSizeValue');
 }
 
-// --- State Modifiers (Export setters if needed, or modify directly via import) ---
-// Example: If you prefer setters for encapsulation
+// --- State Modifiers (Setters) ---
+export function setMarkerRadius(value) { _markerRadius = value; }
+export function setNationTextSize(value) { _nationTextSize = value; }
+export function setFlagBaseDisplaySize(value) { _flagBaseDisplaySize = value; }
 export function setNations(newNations) { nations = newNations; }
 export function setMapImage(newMapImage) { mapImage = newMapImage; }
 export function setMapInfo(newMapInfo) { mapInfo = newMapInfo; }
