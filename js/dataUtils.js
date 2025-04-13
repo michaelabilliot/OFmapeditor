@@ -11,7 +11,9 @@ function getBase64FromDataUrl(dataUrl) {
 }
 
 // --- Flag Handling ---
-// processAndAssignFlag remains the same as the previous version (with resizing for display)
+// processAndAssignFlag correctly resizes both rasters AND SVGs
+// into a bitmap representation stored in nation.flagImage for performance.
+// Original data is stored in nation.flagData / nation.flagDataType.
 export async function processAndAssignFlag(file, nation) {
     const MAX_FLAG_DIMENSION = 150; // Define max width/height for pre-resized flags
 
@@ -19,11 +21,21 @@ export async function processAndAssignFlag(file, nation) {
         if (!file || !nation) { return reject(new Error("Invalid arguments for processAndAssignFlag")); }
         // Basic type check (more robust check later)
         const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
-        const isImage = file.type?.startsWith('image/');
+        // Use file.type if available, otherwise try extension for common types
+        let fileMimeType = file.type;
+        if (!fileMimeType) {
+            if (file.name.toLowerCase().endsWith('.png')) fileMimeType = 'image/png';
+            else if (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) fileMimeType = 'image/jpeg';
+            else if (file.name.toLowerCase().endsWith('.gif')) fileMimeType = 'image/gif';
+            else if (file.name.toLowerCase().endsWith('.webp')) fileMimeType = 'image/webp';
+            else if (isSvg) fileMimeType = 'image/svg+xml';
+        }
+        const isImage = fileMimeType?.startsWith('image/');
+
 
         if (!isSvg && !isImage) {
-            console.warn(`File ${file.name} has unsupported type: ${file.type}. Skipping.`);
-            return reject(new Error(`Unsupported file type for ${file.name}: ${file.type || 'Unknown'}`));
+            console.warn(`File ${file.name} has unsupported type: ${fileMimeType}. Skipping.`);
+            return reject(new Error(`Unsupported file type for ${file.name}: ${fileMimeType || 'Unknown'}`));
         }
 
         const reader = new FileReader();
@@ -34,18 +46,19 @@ export async function processAndAssignFlag(file, nation) {
                 const originalFileData = e.target.result;
                 nation.flag = flagName; // Assign the generated name
                 nation.flagData = originalFileData; // Store ORIGINAL raw data (text for SVG, dataURL for others)
-                nation.flagDataType = isSvg ? 'svg' : file.type.split('/')[1] || 'png'; // Store original type more specifically
+                // Determine original type more robustly
+                nation.flagDataType = isSvg ? 'svg' : (fileMimeType ? fileMimeType.split('/')[1] : 'png'); // Store original type
 
                 const originalFlagImage = new Image();
 
                 originalFlagImage.onload = () => {
-                    // Store original dimensions for saving purposes (or potentially using them if needed)
+                    // Store original dimensions
                     nation.flagWidth = originalFlagImage.naturalWidth;
                     nation.flagHeight = originalFlagImage.naturalHeight;
 
                     if (nation.flagWidth === 0 || nation.flagHeight === 0) {
                         console.warn(`Loaded flag for ${nation.name} but natural dimensions are zero. Check file: ${file.name}`);
-                        // Skip resizing if dimensions are invalid, assign original directly
+                        // Assign original directly as flagImage if dims are invalid
                         nation.flagImage = originalFlagImage;
                         return resolve({ status: 'loaded_zero_dims', filename: file.name, nationName: nation.name });
                     }
@@ -58,31 +71,30 @@ export async function processAndAssignFlag(file, nation) {
                     const resizedWidth = Math.round(nation.flagWidth * resizeRatio);
                     const resizedHeight = Math.round(nation.flagHeight * resizeRatio);
 
-                    // --- Resize using Offscreen Canvas ---
+                    // --- Resize using Offscreen Canvas (Rasterizes SVGs too) ---
                     const offscreenCanvas = document.createElement('canvas');
                     offscreenCanvas.width = resizedWidth;
                     offscreenCanvas.height = resizedHeight;
                     const offscreenCtx = offscreenCanvas.getContext('2d');
 
-                    // Draw original image scaled down onto the offscreen canvas
+                    // Draw original image (raster or SVG) scaled down
                     offscreenCtx.drawImage(originalFlagImage, 0, 0, resizedWidth, resizedHeight);
 
-                    // Get data URL of the *resized* image
-                    const resizedDataUrl = offscreenCanvas.toDataURL(); // Defaults to PNG
+                    // Get data URL of the *resized* bitmap (PNG)
+                    const resizedDataUrl = offscreenCanvas.toDataURL('image/png');
 
-                    // --- Create Final Image Object for Resized Version ---
+                    // --- Create Final Image Object for Resized Bitmap Version ---
                     const finalResizedImage = new Image();
                     finalResizedImage.onload = () => {
-                        // Assign the RESIZED image to be used for drawing
+                        // Assign the RESIZED BITMAP image to be used for drawing
                         nation.flagImage = finalResizedImage;
-                        console.log(`Flag processed & resized for ${nation.name}: ${flagName}.${nation.flagDataType} (Orig: ${nation.flagWidth}x${nation.flagHeight}, Drawn: ${resizedWidth}x${resizedHeight})`);
+                        console.log(`Flag processed & resized for ${nation.name}: ${flagName}.${nation.flagDataType} (Orig: ${nation.flagWidth}x${nation.flagHeight}, Drawn Bitmap: ${resizedWidth}x${resizedHeight})`);
                         resolve({ status: 'loaded', filename: file.name, nationName: nation.name });
                     };
                     finalResizedImage.onerror = (err) => {
-                         console.error(`Error loading RESIZED flag image into final Image object for: ${nation.name} from ${file.name}`, err);
-                         // Fallback: Assign original image if resizing fails? Or reject? Let's reject.
+                         console.error(`Error loading RESIZED flag bitmap into final Image object for: ${nation.name} from ${file.name}`, err);
                          nation.flagImage = null; // Clear potentially broken image ref
-                         reject(new Error(`Failed to load resized flag image data for ${file.name}`));
+                         reject(new Error(`Failed to load resized flag bitmap data for ${file.name}`));
                     };
                     finalResizedImage.src = resizedDataUrl;
 
@@ -90,14 +102,12 @@ export async function processAndAssignFlag(file, nation) {
 
                 originalFlagImage.onerror = (err) => {
                     console.error(`Error loading ORIGINAL flag image into Image object for: ${nation.name} from ${file.name}`, err);
-                    // Clear flag data on error
                     nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
                     reject(new Error(`Failed to load original flag image data for ${file.name}`));
                 };
 
                 // Set the source for the *original* Image object to trigger loading/resizing
                 if (isSvg) {
-                    // Need to Base64 encode the SVG text data for use in src
                     const svgBase64 = btoa(unescape(encodeURIComponent(originalFileData)));
                     originalFlagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
                 } else { // PNG, JPG, GIF, WEBP etc. read as DataURL
@@ -140,7 +150,6 @@ export async function loadFlagFiles(files) {
     let skippedNoMatchCount = 0;
     let skippedTypeCount = 0;
 
-    // Build a map of potential matches: lowercase JSON flag name -> nation, and lowercase generated name -> nation (if no flag set)
     const nationFlagMap = new Map();
     const nationGeneratedNameMap = new Map();
     let jsonSpecifiedFlags = false;
@@ -177,23 +186,18 @@ export async function loadFlagFiles(files) {
 
                 let matchedNation = null;
 
-                // Prioritize matching based on the 'flag' property from JSON
                 if (nationFlagMap.has(potentialMatchNameLower)) {
                     matchedNation = nationFlagMap.get(potentialMatchNameLower);
-                }
-                // If no JSON match, try matching based on generated name (only if nation doesn't already have a flag from JSON)
-                else if (nationGeneratedNameMap.has(potentialMatchNameLower)) {
+                } else if (nationGeneratedNameMap.has(potentialMatchNameLower)) {
                     matchedNation = nationGeneratedNameMap.get(potentialMatchNameLower);
                 }
 
-                // If still no match, skip
                 if (!matchedNation) {
                     skippedNoMatchCount++;
                     resolve({ status: 'skipped_nomatch', filename: file.name });
                     return;
                 }
 
-                 // Check file type (more specific check happens in processAndAssignFlag)
                  const fileType = file.type;
                  const isSvg = fileType === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
                  const isImage = fileType?.startsWith('image/');
@@ -205,7 +209,6 @@ export async function loadFlagFiles(files) {
                      return;
                  }
 
-                // Process the matched flag (which now includes resizing)
                 try {
                      const result = await processAndAssignFlag(file, matchedNation);
                      resolve(result);
@@ -223,15 +226,15 @@ export async function loadFlagFiles(files) {
         });
     });
 
-    // Wait for all file processing attempts
     const results = await Promise.all(fileLoadPromises);
 
     let nationsSuccessfullyLoaded = new Set();
     results.forEach(result => {
-        // status 'loaded' means success (even if dims were 0)
         if (result.status === 'loaded' || result.status === 'loaded_zero_dims') {
             loadedCount++;
-            nationsSuccessfullyLoaded.add(result.nationName);
+            if (result.nationName) { // Ensure nationName exists
+               nationsSuccessfullyLoaded.add(result.nationName);
+            }
         }
     });
 
@@ -241,7 +244,6 @@ export async function loadFlagFiles(files) {
     if (skippedNoMatchCount > 0) statusMsg += ` Skipped (no match): ${skippedNoMatchCount}.`;
     if (skippedTypeCount > 0) statusMsg += ` Skipped (bad type): ${skippedTypeCount}.`;
 
-    // Check for missing flags specified in JSON
     if (jsonSpecifiedFlags) {
         let missingFromJson = [];
         for (const [flagName, nation] of nationFlagMap.entries()) {
@@ -409,30 +411,14 @@ export async function handleJsonLoad(file) {
 
 // --- ZIP Saving ---
 export async function saveProjectAsZip() {
-    // Check if JSZip is loaded
-    if (typeof JSZip === 'undefined') {
-        await showModal('alert', 'Error', 'JSZip library not loaded. Cannot save.');
-        updateStatus('Error: JSZip library not loaded.', true);
-        return;
-    }
-    // Check for map image
-    if (!cfg.mapImage || !cfg.mapInfo.fileName) {
-        await showModal('alert', 'Error', 'Load and process a map image before saving.');
-        return;
-    }
-    if (!cfg.mapInfo.width || !cfg.mapInfo.height) {
-         await showModal('alert', 'Error', 'Map dimensions missing. Cannot save.');
-         return;
-    }
-    // Warn if no nations
-    if (cfg.nations.length === 0) {
-        const confirmEmpty = await showModal('confirm', 'Warning', 'No nations have been added to the map.\nSave project with empty nation list?', { confirmText: 'Save Empty', denyText: 'Cancel' });
-        if (!confirmEmpty) return;
-    }
+    // Checks remain the same...
+    if (typeof JSZip === 'undefined') { await showModal('alert', 'Error', 'JSZip library not loaded.'); return; }
+    if (!cfg.mapImage || !cfg.mapInfo.fileName) { await showModal('alert', 'Error', 'Load map image first.'); return; }
+    if (!cfg.mapInfo.width || !cfg.mapInfo.height) { await showModal('alert', 'Error', 'Map dimensions missing.'); return; }
+    if (cfg.nations.length === 0) { const confirmEmpty = await showModal('confirm', 'Warning', 'No nations added. Save empty project?', { confirmText: 'Save Empty', denyText: 'Cancel' }); if (!confirmEmpty) return; }
 
-    // Get project/zip names
     const defaultProjectName = cfg.mapInfo.name !== "Untitled Map" ? cfg.mapInfo.name : (cfg.mapInfo.fileName ? cfg.mapInfo.fileName.split('.').slice(0, -1).join('.') : 'MyMap');
-    const projectName = await showModal('prompt', 'Save Project', 'Enter project name (used for map image/json filenames inside ZIP):', { defaultValue: defaultProjectName });
+    const projectName = await showModal('prompt', 'Save Project', 'Enter project name (used for map image/json):', { defaultValue: defaultProjectName });
     if (projectName === null) return;
     const safeProjectName = projectName.trim().replace(/[^a-z0-9_-]/gi, '_') || 'map_project';
     const defaultZipFileName = `${safeProjectName}.zip`;
@@ -447,7 +433,7 @@ export async function saveProjectAsZip() {
         const mapsFolder = resourcesFolder.folder("maps");
         const flagsFolder = resourcesFolder.folder("flags");
 
-        // --- Prepare JSON Data (unchanged) ---
+        // JSON Data preparation remains the same
         const mapData = {
             name: safeProjectName, width: cfg.mapInfo.width, height: cfg.mapInfo.height,
             nations: cfg.nations.map(n => {
@@ -461,61 +447,68 @@ export async function saveProjectAsZip() {
         let finalJsonString = jsonString.replace(coordRegex, (match, p1, p2) => `"coordinates": [${p1},${p2}]`);
         mapsFolder.file(`${safeProjectName}.json`, finalJsonString);
 
-        // --- Add Map Image (unchanged) ---
+        // Map Image saving remains the same
         const mapImageBase64 = getBase64FromDataUrl(cfg.mapImage.src);
         if (mapImageBase64) {
              const extension = cfg.mapInfo.fileType.startsWith('image/') ? cfg.mapInfo.fileType.split('/')[1] || 'png' : 'png';
             mapsFolder.file(`${safeProjectName}.${extension}`, mapImageBase64, { base64: true });
         } else {
-            console.warn("Could not get Base64 data for map image. Map image will be missing from ZIP.");
-            await showModal('alert', 'Warning', 'Could not save the map image data. It will be missing from the ZIP.');
+            console.warn("Could not get Base64 data for map image.");
+            await showModal('alert', 'Warning', 'Could not save the map image data.');
         }
 
-        // --- ***MODIFIED*** Add Flags (Save RESIZED representation as SVG) ---
+        // --- ***MODIFIED*** Add Flags (Save ORIGINAL data appropriately) ---
         let flagsAddedCount = 0;
         const flagPromises = cfg.nations.map(async (nation) => {
-            // Only save if flag name AND the RESIZED flagImage are present and loaded
-            if (nation.flag && nation.flagImage && nation.flagImage.complete && nation.flagImage.naturalWidth > 0) {
-                const flagFileName = `${nation.flag}.svg`; // Always save as .svg
+            // Check for flag name, ORIGINAL data, and ORIGINAL type
+            if (nation.flag && nation.flagData && nation.flagDataType) {
+                const flagFileName = `${nation.flag}.svg`; // Always save target as .svg
 
                 try {
-                    // Get the resized dimensions and the data URL from the nation.flagImage
-                    const resizedWidth = nation.flagImage.naturalWidth;
-                    const resizedHeight = nation.flagImage.naturalHeight;
-                    const resizedDataUrl = nation.flagImage.src; // This should be the data URL generated during resizing
-
-                    if (resizedDataUrl && resizedDataUrl.startsWith('data:image')) {
-                         // Create an SVG wrapper containing an <image> tag pointing to the resized data URL
-                        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${resizedWidth}" height="${resizedHeight}" viewBox="0 0 ${resizedWidth} ${resizedHeight}">\n  <image xlink:href="${resizedDataUrl}" width="${resizedWidth}" height="${resizedHeight}" />\n</svg>`;
-                        flagsFolder.file(flagFileName, svgContent);
-                        flagsAddedCount++;
-                    } else {
-                        console.warn(`Could not save resized flag for '${nation.name}': Invalid resized data URL found.`);
+                    if (nation.flagDataType === 'svg') {
+                        // If the original was SVG, save the original SVG text directly.
+                        if (typeof nation.flagData === 'string') {
+                            flagsFolder.file(flagFileName, nation.flagData);
+                            flagsAddedCount++;
+                        } else {
+                             console.warn(`Flag data for SVG '${nation.name}' is not a string.`);
+                        }
                     }
-                } catch(svgError) {
-                     console.warn(`Error creating SVG wrapper for resized flag '${nation.name}':`, svgError);
+                    // Handle original raster types (png, jpeg, gif, webp)
+                    else if (['png', 'jpeg', 'gif', 'webp'].includes(nation.flagDataType)) {
+                         // Check we have original dimensions and the original data URL
+                         if (nation.flagWidth && nation.flagHeight && typeof nation.flagData === 'string' && nation.flagData.startsWith('data:image')) {
+                             // Create SVG wrapper using ORIGINAL dimensions and ORIGINAL data URL
+                            const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${nation.flagWidth}" height="${nation.flagHeight}" viewBox="0 0 ${nation.flagWidth} ${nation.flagHeight}">\n  <image xlink:href="${nation.flagData}" width="${nation.flagWidth}" height="${nation.flagHeight}" />\n</svg>`;
+                            flagsFolder.file(flagFileName, svgContent);
+                            flagsAddedCount++;
+                        } else {
+                            console.warn(`Could not create SVG wrapper for raster flag '${nation.name}' (Type: ${nation.flagDataType}): Missing original dimensions or invalid original data URL.`);
+                        }
+                    }
+                    else {
+                         // Log unsupported original types if necessary
+                         console.warn(`Cannot save flag type '${nation.flagDataType}' for nation '${nation.name}' currently.`);
+                    }
+                } catch(saveError) {
+                    console.warn(`Error preparing flag '${nation.name}' for saving:`, saveError);
                 }
 
             } else if (nation.flag) {
-                 // Log if flag was specified but resized image isn't ready/valid
-                 console.warn(`Could not save flag for '${nation.name}': Resized image data not available or invalid.`);
+                 // Log if flag was specified but original data is missing
+                 console.warn(`Could not save flag for '${nation.name}': Original flag data not available.`);
             }
         });
 
         await Promise.all(flagPromises);
-        console.log(`Added ${flagsAddedCount} flags to ZIP (as .svg, using resized representation).`);
+        console.log(`Added ${flagsAddedCount} flags to ZIP (as .svg, using original data).`);
 
         // --- Generate and Download ZIP (unchanged) ---
         const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
         const url = URL.createObjectURL(zipBlob);
-        const a = document.createElement('a');
-        a.href = url;
+        const a = document.createElement('a'); a.href = url;
         const finalZipFilename = outputZipFilename.endsWith('.zip') ? outputZipFilename : outputZipFilename + '.zip';
-        a.download = finalZipFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.download = finalZipFilename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         updateStatus(`Project saved as '${finalZipFilename}'`);
 
     } catch (error) {
