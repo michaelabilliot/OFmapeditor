@@ -32,7 +32,8 @@ export function mapToCanvasCoords(mapX, mapY) {
 export function getNationAtPos(mapPos) {
     if (!mapPos || !cfg.nations) return null;
     // Calculate hit radius in map coordinates. Add a small buffer (e.g., 2px scaled).
-    const hitRadiusMap = cfg.markerRadius / cfg.zoom + (2 / cfg.zoom);
+    // *** Use getter cfg.markerRadius() ***
+    const hitRadiusMap = cfg.markerRadius() / cfg.zoom + (2 / cfg.zoom);
     // Iterate backwards to prioritize nations drawn on top
     for (let i = cfg.nations.length - 1; i >= 0; i--) {
         const nation = cfg.nations[i];
@@ -158,7 +159,8 @@ export function redrawCanvas() {
     // --- Draw Nations ---
     const currentHoverIndex = (cfg.hoveredNationIndex !== null) ? cfg.hoveredNationIndex : cfg.hoveredListIndex;
     const outlineColor = getCssVariable('--marker-outline-color', '#000');
-    const drawRadiusMap = cfg.markerRadius / cfg.zoom; // Marker radius in map coordinates
+    // *** Use getter cfg.markerRadius() ***
+    const drawRadiusMap = cfg.markerRadius() / cfg.zoom; // Marker radius in map coordinates
     const outlineWidthMap = 1 / cfg.zoom; // Outline width in map coordinates
     const selectionWidthMap = 3 / cfg.zoom; // Selection outline width in map coords
 
@@ -173,7 +175,8 @@ export function redrawCanvas() {
 
         // Slightly enlarge hovered marker (if not selected)
         if (index === currentHoverIndex && index !== cfg.selectedNationIndex) {
-            currentDrawRadiusMap = (cfg.markerRadius + 2) / cfg.zoom; // Enlarge slightly in map coords
+             // *** Use getter cfg.markerRadius() ***
+            currentDrawRadiusMap = (cfg.markerRadius() + 2) / cfg.zoom; // Enlarge slightly in map coords
         }
 
         // --- Draw Flag ---
@@ -182,12 +185,14 @@ export function redrawCanvas() {
              // Calculate display size based on configured base size and aspect ratio
              const baseRatio = flagImg.naturalHeight / flagImg.naturalWidth;
              let displayWidthMap, displayHeightMap;
+             // *** Use getter cfg.flagBaseDisplaySize() ***
+             const flagBaseSize = cfg.flagBaseDisplaySize();
 
              if (flagImg.naturalWidth >= flagImg.naturalHeight) {
-                 displayWidthMap = cfg.flagBaseDisplaySize / cfg.zoom; // Base size scaled
+                 displayWidthMap = flagBaseSize / cfg.zoom; // Base size scaled
                  displayHeightMap = displayWidthMap * baseRatio;
              } else {
-                 displayHeightMap = cfg.flagBaseDisplaySize / cfg.zoom; // Base size scaled
+                 displayHeightMap = flagBaseSize / cfg.zoom; // Base size scaled
                  displayWidthMap = displayHeightMap / baseRatio;
              }
 
@@ -273,7 +278,8 @@ export function redrawCanvas() {
         // --- Draw Nation Text ---
         // Draw text below the marker
         const textStr = `${nation.name} (${strength})`;
-        drawTextWithBackground(textStr, mapX, mapY, cfg.nationTextSize, currentDrawRadiusMap);
+        // *** Use getter cfg.nationTextSize() ***
+        drawTextWithBackground(textStr, mapX, mapY, cfg.nationTextSize(), currentDrawRadiusMap);
     });
 
     // Restore the context state (cleans up transform, styles, etc.)
