@@ -12,81 +12,118 @@ function getBase64FromDataUrl(dataUrl) {
 
 // --- Flag Handling ---
 export async function processAndAssignFlag(file, nation) {
-    // ... (Keep the exact processAndAssignFlag function from the original script) ...
-     return new Promise((resolve, reject) => {
-         if (!file || !nation) { return reject(new Error("Invalid arguments for processAndAssignFlag")); }
-         // Tolerate missing type by trying extension? For now, require type.
-         if (!file.type && !(file.name.toLowerCase().endsWith('.svg') || file.name.toLowerCase().endsWith('.png'))) {
-             console.warn(`File ${file.name} is missing type and doesn't end with .svg/.png. Cannot determine type.`);
-             return reject(new Error(`Cannot determine file type for ${file.name}`));
-         }
-         const reader = new FileReader();
-         const flagName = generateFlagName(nation.name); // Use imported helper
-         const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
-         const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png'); // Check PNG explicitly
+    const MAX_FLAG_DIMENSION = 150; // Define max width/height for pre-resized flags
 
-         reader.onload = (e) => {
-             try {
-                 const fileData = e.target.result;
-                 nation.flag = flagName; // Assign the generated name
-                 nation.flagData = fileData; // Store raw data (text for SVG, dataURL for PNG)
-                 nation.flagDataType = isSvg ? 'svg' : (isPng ? 'png' : null); // Store type explicitly
-                 nation.flagImage = new Image();
-                 nation.flagWidth = null; // Reset dimensions
-                 nation.flagHeight = null;
+    return new Promise((resolve, reject) => {
+        if (!file || !nation) { return reject(new Error("Invalid arguments for processAndAssignFlag")); }
+        // Basic type check (more robust check later)
+        const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+        const isImage = file.type?.startsWith('image/');
 
-                 nation.flagImage.onload = () => {
-                     nation.flagWidth = nation.flagImage.naturalWidth;
-                     nation.flagHeight = nation.flagImage.naturalHeight;
-                     if ((isSvg || isPng) && (nation.flagWidth === 0 || nation.flagHeight === 0)) {
-                         console.warn(`Loaded ${nation.flagDataType} flag for ${nation.name} but natural dimensions are zero. Check file: ${file.name}`);
-                     }
-                     console.log(`Flag loaded for ${nation.name}: ${flagName}.${nation.flagDataType} (${nation.flagWidth}x${nation.flagHeight})`);
-                     resolve({ status: 'loaded', filename: file.name, nationName: nation.name });
-                 };
-                 nation.flagImage.onerror = (err) => {
-                     console.error(`Error loading ${nation.flagDataType || 'unknown type'} flag image into Image object for: ${nation.name} from ${file.name}`, err);
-                     // Clear flag data on error
-                     nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
-                     reject(new Error(`Failed to load flag image data for ${file.name}`));
-                 };
+        if (!isSvg && !isImage) {
+            console.warn(`File ${file.name} has unsupported type: ${file.type}. Skipping.`);
+            return reject(new Error(`Unsupported file type for ${file.name}: ${file.type || 'Unknown'}`));
+        }
 
-                 // Set the source for the Image object
-                 if (isSvg) {
-                     // Need to Base64 encode the SVG text data for use in src
-                     const svgBase64 = btoa(unescape(encodeURIComponent(fileData)));
-                     nation.flagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
-                 } else if (isPng) {
-                     nation.flagImage.src = fileData; // fileData is already a dataURL from readAsDataURL
-                 } else {
-                     // Should not happen if type check passed, but safety first
-                     console.error("Inconsistent flag type during processing.");
-                     reject(new Error(`Inconsistent type for ${file.name}`));
-                 }
+        const reader = new FileReader();
+        const flagName = generateFlagName(nation.name); // Use imported helper
 
-             } catch (loadError) {
-                 console.error(`Error processing file data for ${nation.name} (${file.name}):`, loadError);
-                 nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
-                 reject(new Error(`Processing error for ${file.name}: ${loadError.message}`));
-             }
-         };
+        reader.onload = (e) => {
+            try {
+                const originalFileData = e.target.result;
+                nation.flag = flagName; // Assign the generated name
+                nation.flagData = originalFileData; // Store ORIGINAL raw data (text for SVG, dataURL for others)
+                nation.flagDataType = isSvg ? 'svg' : file.type.split('/')[1] || 'png'; // Store original type more specifically
 
-         reader.onerror = (err) => {
-             console.error(`Error reading file ${file.name}:`, err);
-             reject(new Error(`File read error for ${file.name}`));
-         };
+                const originalFlagImage = new Image();
 
-         // Read based on type
-         if (isSvg) {
-             reader.readAsText(file); // Read SVG as text
-         } else if (isPng) {
-             reader.readAsDataURL(file); // Read PNG as data URL
-         } else {
-             // This case should ideally be caught earlier
-             reject(new Error(`Unsupported file type for processing: ${file.type || file.name}`));
-         }
-     });
+                originalFlagImage.onload = () => {
+                    // Store original dimensions for saving purposes
+                    nation.flagWidth = originalFlagImage.naturalWidth;
+                    nation.flagHeight = originalFlagImage.naturalHeight;
+
+                    if (nation.flagWidth === 0 || nation.flagHeight === 0) {
+                        console.warn(`Loaded flag for ${nation.name} but natural dimensions are zero. Check file: ${file.name}`);
+                        // Skip resizing if dimensions are invalid, keep original (potentially broken) data
+                        nation.flagImage = originalFlagImage; // Assign original directly
+                        return resolve({ status: 'loaded_zero_dims', filename: file.name, nationName: nation.name });
+                    }
+
+                    // --- Calculate Resized Dimensions ---
+                    let resizeRatio = 1;
+                    if (nation.flagWidth > MAX_FLAG_DIMENSION || nation.flagHeight > MAX_FLAG_DIMENSION) {
+                        resizeRatio = Math.min(MAX_FLAG_DIMENSION / nation.flagWidth, MAX_FLAG_DIMENSION / nation.flagHeight);
+                    }
+                    const resizedWidth = Math.round(nation.flagWidth * resizeRatio);
+                    const resizedHeight = Math.round(nation.flagHeight * resizeRatio);
+
+                    // --- Resize using Offscreen Canvas ---
+                    const offscreenCanvas = document.createElement('canvas');
+                    offscreenCanvas.width = resizedWidth;
+                    offscreenCanvas.height = resizedHeight;
+                    const offscreenCtx = offscreenCanvas.getContext('2d');
+
+                    // Draw original image scaled down onto the offscreen canvas
+                    offscreenCtx.drawImage(originalFlagImage, 0, 0, resizedWidth, resizedHeight);
+
+                    // Get data URL of the *resized* image
+                    const resizedDataUrl = offscreenCanvas.toDataURL(); // Defaults to PNG
+
+                    // --- Create Final Image Object for Resized Version ---
+                    const finalResizedImage = new Image();
+                    finalResizedImage.onload = () => {
+                        // Assign the RESIZED image to be used for drawing
+                        nation.flagImage = finalResizedImage;
+                        console.log(`Flag processed & resized for ${nation.name}: ${flagName}.${nation.flagDataType} (Orig: ${nation.flagWidth}x${nation.flagHeight}, Drawn: ${resizedWidth}x${resizedHeight})`);
+                        resolve({ status: 'loaded', filename: file.name, nationName: nation.name });
+                    };
+                    finalResizedImage.onerror = (err) => {
+                         console.error(`Error loading RESIZED flag image into final Image object for: ${nation.name} from ${file.name}`, err);
+                         // Fallback: Assign original image if resizing fails? Or reject? Let's reject.
+                         nation.flagImage = null; // Clear potentially broken image ref
+                         reject(new Error(`Failed to load resized flag image data for ${file.name}`));
+                    };
+                    finalResizedImage.src = resizedDataUrl;
+
+                }; // End originalFlagImage.onload
+
+                originalFlagImage.onerror = (err) => {
+                    console.error(`Error loading ORIGINAL flag image into Image object for: ${nation.name} from ${file.name}`, err);
+                    // Clear flag data on error
+                    nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
+                    reject(new Error(`Failed to load original flag image data for ${file.name}`));
+                };
+
+                // Set the source for the *original* Image object to trigger loading/resizing
+                if (isSvg) {
+                    // Need to Base64 encode the SVG text data for use in src
+                    const svgBase64 = btoa(unescape(encodeURIComponent(originalFileData)));
+                    originalFlagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
+                } else { // PNG, JPG, GIF, WEBP etc. read as DataURL
+                    originalFlagImage.src = originalFileData;
+                }
+
+            } catch (loadError) {
+                console.error(`Error processing file data for ${nation.name} (${file.name}):`, loadError);
+                nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
+                reject(new Error(`Processing error for ${file.name}: ${loadError.message}`));
+            }
+        }; // End reader.onload
+
+        reader.onerror = (err) => {
+            console.error(`Error reading file ${file.name}:`, err);
+            reject(new Error(`File read error for ${file.name}`));
+        };
+
+        // Read based on type
+        if (isSvg) {
+            reader.readAsText(file); // Read SVG as text
+        } else { // PNG, JPG, GIF, WEBP etc.
+            reader.readAsDataURL(file); // Read as data URL
+        }
+    });
 }
+
 
 export async function loadFlagFiles(files) {
     if (!files || files.length === 0) return;
@@ -156,25 +193,19 @@ export async function loadFlagFiles(files) {
                     return;
                 }
 
-                // Check file type (allow known image types or SVG)
+                 // Check file type (more specific check happens in processAndAssignFlag)
                  const fileType = file.type;
                  const isSvg = fileType === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
-                 const isPng = fileType === 'image/png' || file.name.toLowerCase().endsWith('.png');
-                 // Add more types if needed (jpeg, gif, webp)
-                 const isOtherImage = ['image/jpeg', 'image/gif', 'image/webp'].includes(fileType) ||
-                                     /\.(jpe?g|gif|webp)$/i.test(file.name); // Basic extension check as fallback
+                 const isImage = fileType?.startsWith('image/');
 
-                 if (!(isSvg || isPng || isOtherImage)) {
+                 if (!isSvg && !isImage) {
                      console.warn(`Skipping file with unsupported type: ${file.name} (Type: ${fileType || 'unknown'})`);
                      skippedTypeCount++;
                      resolve({ status: 'skipped_type', filename: file.name });
                      return;
                  }
-                 // For now, we primarily handle SVG and PNG internally for saving, but can load others.
-                 // We'll treat JPEG/GIF/WEBP like PNG for loading (readAsDataURL) but won't convert to SVG on save yet.
-                 // Modify processAndAssignFlag if explicit handling of other types is needed.
 
-                // Process the matched flag
+                // Process the matched flag (which now includes resizing)
                 try {
                      const result = await processAndAssignFlag(file, matchedNation);
                      resolve(result); // Forward the result from processAndAssignFlag
@@ -197,7 +228,8 @@ export async function loadFlagFiles(files) {
 
     let nationsSuccessfullyLoaded = new Set();
     results.forEach(result => {
-        if (result.status === 'loaded') {
+        // status 'loaded' means success (even if dims were 0)
+        if (result.status === 'loaded' || result.status === 'loaded_zero_dims') {
             loadedCount++;
             nationsSuccessfullyLoaded.add(result.nationName);
         }
@@ -214,9 +246,7 @@ export async function loadFlagFiles(files) {
     if (jsonSpecifiedFlags) {
         let missingFromJson = [];
         for (const [flagName, nation] of nationFlagMap.entries()) {
-            // Check if a nation that *should* have a flag (from JSON) didn't get one loaded
-            // This check is a bit complex if generated names could also match.
-            // Let's check if the nation object itself had its flagImage set successfully.
+            // Check if the nation object itself had its flagImage set successfully.
             if (!nation.flagImage) {
                 // It was specified in JSON but wasn't loaded (either no file matched or processing failed)
                  missingFromJson.push(nation.name); // Report nation name might be clearer
@@ -356,11 +386,11 @@ export async function handleJsonLoad(file) {
                     strength: nation.strength,
                     flag: nation.flag || null, // Ensure flag is null if missing or empty string
                     // Reset flag image data, needs to be loaded separately
-                    flagImage: null,
-                    flagData: null,
-                    flagDataType: null,
-                    flagWidth: null,
-                    flagHeight: null
+                    flagImage: null, // This will hold the RESIZED image after flag loading
+                    flagData: null, // This holds the ORIGINAL flag data after loading
+                    flagDataType: null, // Original data type
+                    flagWidth: null, // Original width
+                    flagHeight: null // Original height
                 });
             }
 
@@ -505,30 +535,28 @@ export async function saveProjectAsZip() {
             await showModal('alert', 'Warning', 'Could not save the map image data. It will be missing from the ZIP.');
         }
 
-        // --- Add Flags (Save as SVG) ---
+        // --- Add Flags (Save ORIGINAL data as SVG) ---
         let flagsAddedCount = 0;
         const flagPromises = cfg.nations.map(async (nation) => {
-            // Only save if flag name, data, and type are present
+            // Only save if flag name and ORIGINAL data/type are present
             if (nation.flag && nation.flagData && nation.flagDataType) {
                 const flagFileName = `${nation.flag}.svg`; // Always save as .svg
 
                 if (nation.flagDataType === 'svg') {
-                    // Save SVG data directly
+                    // Save original SVG data directly
                     flagsFolder.file(flagFileName, nation.flagData);
                     flagsAddedCount++;
-                } else if (nation.flagDataType === 'png') {
-                    // Wrap PNG in an SVG
-                    if (nation.flagWidth && nation.flagHeight && nation.flagData.startsWith('data:image')) {
-                        // nation.flagData should be the base64 data URL for PNG
+                } else if (nation.flagDataType === 'png' || nation.flagDataType === 'jpeg' || nation.flagDataType === 'gif' || nation.flagDataType === 'webp') {
+                    // Wrap original PNG/JPG/GIF/WEBP data URL in an SVG
+                    if (nation.flagWidth && nation.flagHeight && typeof nation.flagData === 'string' && nation.flagData.startsWith('data:image')) {
+                        // nation.flagData should be the original base64 data URL
                         const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${nation.flagWidth}" height="${nation.flagHeight}" viewBox="0 0 ${nation.flagWidth} ${nation.flagHeight}">\n  <image xlink:href="${nation.flagData}" width="${nation.flagWidth}" height="${nation.flagHeight}" />\n</svg>`;
                         flagsFolder.file(flagFileName, svgContent);
                         flagsAddedCount++;
                     } else {
-                        console.warn(`Could not create SVG wrapper for PNG flag '${nation.name}': Missing dimensions or invalid data URL.`);
+                        console.warn(`Could not create SVG wrapper for flag '${nation.name}' (Type: ${nation.flagDataType}): Missing dimensions or invalid data URL.`);
                     }
                 } else {
-                     // Handle other types if needed (e.g., convert JPG/WEBP to PNG first, then wrap)
-                     // For now, just log a warning if we have data but don't know how to save it as SVG.
                      console.warn(`Cannot save flag type '${nation.flagDataType}' for nation '${nation.name}' as SVG currently.`);
                 }
             }
