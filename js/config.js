@@ -43,32 +43,16 @@ export let isPanningAnimationActive = false;
 export function assignElements() {
     canvas = document.getElementById('mapCanvas');
     canvasContainer = document.getElementById('canvas-container');
-    ctx = canvas.getContext('2d'); // Assign context here
-    imageInput = document.getElementById('mapImageInput');
-    loadMapLabel = document.getElementById('loadMapLabel');
-    jsonLoadInput = document.getElementById('jsonLoadInput');
-    jsonLoadLabel = document.getElementById('jsonLoadLabel');
-    saveButton = document.getElementById('saveButton');
-    loadFlagsButton = document.getElementById('loadFlagsButton');
-    zoomInButton = document.getElementById('zoomInButton');
-    zoomOutButton = document.getElementById('zoomOutButton');
-    zoomResetButton = document.getElementById('zoomResetButton');
-    zoomDisplay = document.getElementById('zoomDisplay');
-    statusDiv = document.getElementById('status');
-    coordinateDisplay = document.getElementById('coordinateDisplay');
-    nationListContainer = document.getElementById('nationListContainer');
-    nationListUl = document.getElementById('nationList');
-    nationListCountSpan = document.getElementById('nationListCount');
+    // Get context only if canvas exists
+    ctx = canvas ? canvas.getContext('2d') : null;
+
+    // Assign elements present in static HTML first
     settingsButton = document.getElementById('settingsButton');
     settingsPanel = document.getElementById('settingsPanel');
-    closeSettingsButton = document.getElementById('closeSettingsButton');
-    markerSizeInput = document.getElementById('markerSizeInput');
-    markerSizeValue = document.getElementById('markerSizeValue');
-    darkModeToggle = document.getElementById('darkModeToggle');
-    nationTextSizeInput = document.getElementById('nationTextSizeInput');
-    nationTextSizeValue = document.getElementById('nationTextSizeValue');
-    flagSizeInput = document.getElementById('flagSizeInput');
-    flagSizeValue = document.getElementById('flagSizeValue');
+    controlsDiv = document.getElementById('controls');
+    coordinateDisplay = document.getElementById('coordinateDisplay');
+    statusDiv = document.getElementById('status');
+    instructionsDiv = document.getElementById('instructions');
     inlineEditPanel = document.getElementById('inlineEditPanel');
     inlineEditName = document.getElementById('inlineEditName');
     inlineEditStrength = document.getElementById('inlineEditStrength');
@@ -82,6 +66,9 @@ export function assignElements() {
     infoFlagUploadInput = document.getElementById('info-flag-upload-input');
     infoFlagUploadLabel = document.getElementById('info-flag-upload-label');
     infoFlagRemoveButton = document.getElementById('info-flag-remove-button');
+    nationListContainer = document.getElementById('nationListContainer');
+    nationListUl = document.getElementById('nationList');
+    nationListCountSpan = document.getElementById('nationListCount');
     modalOverlay = document.getElementById('modal-overlay');
     modalDialog = document.getElementById('modal-dialog');
     modalTitle = document.getElementById('modal-title');
@@ -93,8 +80,27 @@ export function assignElements() {
     modalCancel = document.getElementById('modal-cancel');
     modalConfirm = document.getElementById('modal-confirm');
     modalDeny = document.getElementById('modal-deny');
-    controlsDiv = document.getElementById('controls'); // Added
-    instructionsDiv = document.getElementById('instructions'); // Added
+
+    // Assign elements that are dynamically added by populateDynamicElements
+    // These might be null on the first call, but will be found on the second call in main.js
+    imageInput = document.getElementById('mapImageInput');
+    loadMapLabel = document.getElementById('loadMapLabel');
+    jsonLoadInput = document.getElementById('jsonLoadInput');
+    jsonLoadLabel = document.getElementById('jsonLoadLabel');
+    saveButton = document.getElementById('saveButton');
+    loadFlagsButton = document.getElementById('loadFlagsButton');
+    zoomInButton = document.getElementById('zoomInButton');
+    zoomOutButton = document.getElementById('zoomOutButton');
+    zoomResetButton = document.getElementById('zoomResetButton');
+    zoomDisplay = document.getElementById('zoomDisplay');
+    closeSettingsButton = document.getElementById('closeSettingsButton');
+    markerSizeInput = document.getElementById('markerSizeInput');
+    markerSizeValue = document.getElementById('markerSizeValue');
+    darkModeToggle = document.getElementById('darkModeToggle');
+    nationTextSizeInput = document.getElementById('nationTextSizeInput');
+    nationTextSizeValue = document.getElementById('nationTextSizeValue');
+    flagSizeInput = document.getElementById('flagSizeInput');
+    flagSizeValue = document.getElementById('flagSizeValue');
 }
 
 // --- State Modifiers (Export setters if needed, or modify directly via import) ---

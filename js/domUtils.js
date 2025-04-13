@@ -17,14 +17,21 @@ export function getCssVariable(varName, fallback = '#000') {
 // --- Dynamic HTML Population ---
 export function populateDynamicElements() {
     // Ensure elements exist before setting innerHTML
+    // These elements (cfg.settingsPanel etc.) MUST have been assigned by assignElements before this runs.
     if (cfg.settingsPanel) {
         cfg.settingsPanel.innerHTML = `<h3>Settings</h3><div class="setting-item"><label for="markerSizeInput">Marker Screen Radius (<span id="markerSizeValue">8</span>px):</label><input type="range" id="markerSizeInput" min="3" max="20" value="8"></div><div class="setting-item"><label for="nationTextSizeInput">Text Screen Size (<span id="nationTextSizeValue">12</span>px):</label><input type="range" id="nationTextSizeInput" min="8" max="24" value="12"></div><div class="setting-item"><label for="flagSizeInput">Flag Screen Size (<span id="flagSizeValue">30</span>px):</label><input type="range" id="flagSizeInput" min="10" max="60" value="30"></div><div class="setting-item"><label for="darkModeToggle">Dark Mode:</label><label class="toggle-switch"><input type="checkbox" id="darkModeToggle"><span class="slider"></span></label></div><button id="closeSettingsButton">Close Settings</button>`;
+    } else {
+        console.error("Cannot populate settings panel: #settingsPanel not found.");
     }
     if (cfg.controlsDiv) {
         cfg.controlsDiv.innerHTML = `<div class="control-group"><input type="file" id="mapImageInput" class="visually-hidden" accept="image/*"><label id="loadMapLabel" class="file-label-button">Load Map</label></div><div class="control-group"><input type="file" id="jsonLoadInput" class="visually-hidden" accept=".json,application/json"><label for="jsonLoadInput" id="jsonLoadLabel" class="file-label-button" data-disabled="true">Load JSON</label></div><div class="control-group"><button id="loadFlagsButton" disabled>Load Flags</button></div><div class="control-group"><button id="saveButton" disabled>Save ZIP</button></div><div id="zoomControls" class="control-group"><button id="zoomOutButton" title="Zoom Out (-)">-</button><span id="zoomDisplay">100%</span><button id="zoomInButton" title="Zoom In (+)">+</button><button id="zoomResetButton" title="Reset View (0)">Reset</button></div>`;
+    } else {
+         console.error("Cannot populate controls: #controls not found.");
     }
     if (cfg.instructionsDiv) {
         cfg.instructionsDiv.innerHTML = `<h3>Instructions</h3><p><b>Loading:</b></p><ul><li><span class="highlight">Load Map:</span> Select base map image (<span class="highlight">it will be auto-colorized!</span>).</li><li><span class="highlight">Load JSON:</span> (Optional) Load existing nation data.</li><li><span class="highlight">Load Flags:</span> Load flag images (<span class="highlight">PNG or SVG</span>). You'll be prompted after loading JSON, or use the button. <span class="highlight">Select ALL relevant flag files</span> from their folder.</li><li><span class="highlight">Save ZIP:</span> Save project (map, json, flags) as ZIP. <span class="highlight">All flags are saved as SVG</span> (PNGs embedded).</li></ul><p><b>Map Interaction:</b></p><ul><li><b>Pan:</b> Click & Drag empty space.</li><li><b>Zoom:</b> Mouse Wheel or +/- keys.</li><li><b>Reset View:</b> '0' key or Reset button.</li></ul><p><b>Nations:</b></p><ul><li><b>Add:</b> Click empty space.</li><li><b>Select:</b> Click marker or list item (in Info Panel).</li><li><b>Move:</b> Click & Drag selected marker.</li><li><b>Edit:</b> Double-Click marker (popup).</li><li><b>Delete:</b> Select, then Delete/Backspace key OR '✖' in list (in Info Panel).</li><li><span class="highlight">Go To (List):</span> Double-click list item to <span class="highlight">smoothly pan</span> map.</li><li><b>Add/Change Flag:</b> Select nation, use 'Upload Flag' in Info Panel (<span class="highlight">PNG or SVG</span>).</li><li><b>Remove Flag:</b> Select nation, use '✖ Remove' in Info Panel.</li></ul><p><b>Other:</b></p><ul><li><b>Deselect:</b> Press Esc key.</li><li><b>Save:</b> Press 'S' key (saves ZIP).</li><li><b>Settings (⚙️):</b> Theme, sizes (marker, text, flag).</li></ul>`;
+    } else {
+         console.error("Cannot populate instructions: #instructions not found.");
     }
 }
 
@@ -278,21 +285,21 @@ export function loadSettings() {
         const savedRadius = localStorage.getItem('mapEditor_markerRadius');
         if (savedRadius !== null) {
             const radius = parseInt(savedRadius, 10);
-            if (!isNaN(radius) && radius >= parseInt(cfg.markerSizeInput.min, 10) && radius <= parseInt(cfg.markerSizeInput.max, 10)) {
+            if (!isNaN(radius) && cfg.markerSizeInput && radius >= parseInt(cfg.markerSizeInput.min, 10) && radius <= parseInt(cfg.markerSizeInput.max, 10)) {
                 cfg.markerRadius = radius;
                 cfg.markerSizeInput.value = String(cfg.markerRadius); // Set input value as string
             }
         }
 
         const savedDarkMode = localStorage.getItem('mapEditor_darkMode');
-        if (savedDarkMode !== null) {
+        if (savedDarkMode !== null && cfg.darkModeToggle) {
             cfg.darkModeToggle.checked = (savedDarkMode === 'true');
         }
 
         const savedTextSize = localStorage.getItem('mapEditor_nationTextSize');
         if (savedTextSize !== null) {
              const size = parseInt(savedTextSize, 10);
-             if (!isNaN(size) && size >= parseInt(cfg.nationTextSizeInput.min, 10) && size <= parseInt(cfg.nationTextSizeInput.max, 10)) {
+             if (!isNaN(size) && cfg.nationTextSizeInput && size >= parseInt(cfg.nationTextSizeInput.min, 10) && size <= parseInt(cfg.nationTextSizeInput.max, 10)) {
                  cfg.nationTextSize = size;
                  cfg.nationTextSizeInput.value = String(cfg.nationTextSize); // Set input value as string
              }
@@ -301,7 +308,7 @@ export function loadSettings() {
         const savedFlagSize = localStorage.getItem('mapEditor_flagBaseDisplaySize');
          if (savedFlagSize !== null) {
              const size = parseInt(savedFlagSize, 10);
-             if (!isNaN(size) && size >= parseInt(cfg.flagSizeInput.min, 10) && size <= parseInt(cfg.flagSizeInput.max, 10)) {
+             if (!isNaN(size) && cfg.flagSizeInput && size >= parseInt(cfg.flagSizeInput.min, 10) && size <= parseInt(cfg.flagSizeInput.max, 10)) {
                  cfg.flagBaseDisplaySize = size;
                  cfg.flagSizeInput.value = String(cfg.flagBaseDisplaySize); // Set input value as string
              }
@@ -341,7 +348,9 @@ export function showModal(type, title, message, options = {}) {
         }
         if (cfg.currentModalResolve) {
             console.warn("Modal system busy. Cannot show new modal.");
-            return resolve(null); // Indicate busy state
+            // Optionally, resolve the previous one? Or just fail the new one.
+            // For now, just fail the new one.
+             return resolve(null); // Indicate busy state
         }
         cfg.setCurrentModalResolve(resolve);
 

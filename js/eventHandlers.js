@@ -8,6 +8,11 @@ import * as nationUtils from './nationUtils.js';
 
 // --- Map Loading Events ---
 export async function handleMapLoadClick(event) {
+    if (!cfg.imageInput) {
+        console.error("Map image input not found!");
+        domUtils.showModal('alert', 'Error', 'Cannot find map image input element.');
+        return;
+    }
     event.preventDefault(); // Prevent label triggering input immediately
     // Optional: Show a reminder/confirmation modal if desired
     // const userConfirmed = await domUtils.showModal('alert', 'Map Loading', 'Remember to use colorized maps!');
@@ -41,7 +46,7 @@ export async function handleJsonFileSelect(event) {
 
 // --- Canvas Interaction Events ---
 export function handleCanvasMouseDown(event) {
-    if (!cfg.mapImage || event.button !== 0 || cfg.currentModalResolve || cfg.isPanningAnimationActive) return;
+    if (!cfg.mapImage || event.button !== 0 || cfg.currentModalResolve || cfg.isPanningAnimationActive || !cfg.inlineEditPanel) return;
 
     const canvasPos = canvasUtils.getCanvasMousePos(event);
     if (!canvasPos) return;
@@ -325,7 +330,7 @@ export function handleCanvasWheel(event) {
 export async function handleDocumentKeyDown(event) {
     const activeElement = document.activeElement;
     const isInputFocused = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable;
-    const isInlineEditorInputFocused = cfg.inlineEditPanel.style.display === 'block' &&
+    const isInlineEditorInputFocused = cfg.inlineEditPanel?.style.display === 'block' &&
                                        (activeElement === cfg.inlineEditName || activeElement === cfg.inlineEditStrength);
 
     // Ignore most keyboard shortcuts if a modal is open, a general input is focused, or during animation
@@ -372,11 +377,11 @@ export async function handleDocumentKeyDown(event) {
             break;
         case 'Escape':
              event.preventDefault();
-             if (cfg.isSettingsVisible && cfg.settingsPanel.style.display !== 'none') {
+             if (cfg.isSettingsVisible && cfg.settingsPanel?.style.display !== 'none') {
                  // Hide settings panel
                  cfg.setIsSettingsVisible(false);
                  cfg.settingsPanel.style.display = 'none';
-             } else if (cfg.inlineEditPanel.style.display === 'block') {
+             } else if (cfg.inlineEditPanel?.style.display === 'block') {
                   // Close inline editor (should have been caught earlier if focused, but safe fallback)
                   domUtils.closeInlineEditor();
              } else if (cfg.selectedNationIndex !== null) {
@@ -408,6 +413,7 @@ export async function handleDocumentKeyDown(event) {
 
 // --- Settings Panel Events ---
 export function handleSettingsToggle() {
+    if (!cfg.settingsPanel) return;
      cfg.setIsSettingsVisible(!cfg.isSettingsVisible);
      cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none';
 }

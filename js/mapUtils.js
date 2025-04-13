@@ -1,6 +1,6 @@
 // --- START OF FILE js/mapUtils.js ---
 import * as cfg from './config.js';
-import { updateStatus, showModal, updateNationList, updateInfoPanel } from './domUtils.js';
+import { updateStatus, showModal, updateNationList, updateInfoPanel, closeInlineEditor } from './domUtils.js';
 import { redrawCanvas, resetView, setInitialCanvasSize } from './canvasUtils.js';
 
 async function colorizeLoadedMap(sourceImage, imageType) {
@@ -136,7 +136,7 @@ export async function handleMapImageLoad(file) {
                     cfg.setDraggingNation(false);
                     cfg.setIsPanning(false);
                     cfg.setPotentialPan(false);
-                    // cfg.closeInlineEditor(); // closeInlineEditor needs import
+                    closeInlineEditor(); // closeInlineEditor needs import
 
                     // Resize canvas *after* map info is known
                     setInitialCanvasSize(); // Resize before resetView

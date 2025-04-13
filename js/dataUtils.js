@@ -1,6 +1,6 @@
 // --- START OF FILE js/dataUtils.js ---
 import * as cfg from './config.js';
-import { updateStatus, showModal, updateNationList, updateInfoPanel } from './domUtils.js';
+import { updateStatus, showModal, updateNationList, updateInfoPanel, closeInlineEditor } from './domUtils.js';
 import { redrawCanvas, resetView } from './canvasUtils.js';
 import { generateFlagName } from './nationUtils.js'; // Need this helper
 
@@ -374,7 +374,7 @@ export async function handleJsonLoad(file) {
             cfg.setDraggingNation(false);
             cfg.setIsPanning(false);
             cfg.setPotentialPan(false);
-            // cfg.closeInlineEditor(); // Needs import
+            closeInlineEditor(); // Needs import
 
             statusMessage = needsScaling
                 ? `Loaded and scaled ${validatedNations.length} nations from ${file.name}. Map name: "${loadedMapName}".`
