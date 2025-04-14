@@ -7,6 +7,10 @@ import * as dataUtils from './dataUtils.js';
 import * as nationUtils from './nationUtils.js';
 import * as handlers from './eventHandlers.js';
 
+// --- Map Generator Imports ---
+import { generateMap } from './map-generator/mapGenerator.js';
+import * as mapGenConfig from './map-generator/mapGenConfig.js'; // Import config for generator defaults
+
 function initializeApp() {
     console.log("Initializing OpenFront Map Editor...");
 
@@ -22,19 +26,17 @@ function initializeApp() {
 
     // 3. Populate dynamic HTML content (controls, instructions, settings)
     //    This requires the container elements (cfg.settingsPanel etc.) to be assigned already.
-    domUtils.populateDynamicElements();
+    domUtils.populateDynamicElements(); // Make sure this ADDS to #controls or modifies it carefully if the Generate button is static HTML
 
-    // 4. Assign references AGAIN to capture the DYNAMICALLY added elements
+    // 4. Assign references AGAIN to capture the DYNAMICALLY added elements AND statically added ones like GenerateMapButton
     //    This will re-assign static elements too, but crucially finds the dynamic ones now.
     cfg.assignElements();
 
     // 5. Check if essential DYNAMIC elements were found (optional but good practice)
-    //    Add checks here for elements like cfg.saveButton, cfg.markerSizeInput etc. if needed
-    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput) {
-         console.warn("Some dynamic UI elements might be missing. Check populateDynamicElements() and IDs.");
+    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.generateMapButton) { // Added check for generateMapButton
+         console.warn("Some dynamic or essential UI elements might be missing. Check populateDynamicElements(), HTML IDs, and config.js.");
          // Decide if this is critical enough to abort
     }
-
 
     // 6. Load settings (theme, sizes) and apply them
     //    This requires the settings input elements to be assigned now.
@@ -89,6 +91,7 @@ function setupEventListeners() {
     cfg.jsonLoadInput?.addEventListener('change', handlers.handleJsonFileSelect); // Listener on input, triggered by label click
     cfg.loadFlagsButton?.addEventListener('click', dataUtils.promptAndLoadFlags);
     cfg.saveButton?.addEventListener('click', dataUtils.saveProjectAsZip);
+    cfg.generateMapButton?.addEventListener('click', handleGenerateMapClick); // <<<--- ADDED LISTENER
 
     // Zoom Controls
     cfg.zoomInButton?.addEventListener('click', () => canvasUtils.changeZoom(1.25));
@@ -133,6 +136,155 @@ function setupEventListeners() {
 
     // Note: Nation list item listeners (hover, click, dblclick, delete) are added dynamically in domUtils.updateNationList()
 }
+
+
+// --- Map Generation Handler --- <<<--- NEW FUNCTION
+async function handleGenerateMapClick() {
+    // Prevent generation if busy
+    if (cfg.isPanning || cfg.draggingNation || cfg.currentModalResolve || cfg.isPanningAnimationActive) {
+        domUtils.showModal('alert', 'Busy', 'Please finish the current action (panning, dragging, modal) before generating a new map.');
+        return;
+    }
+
+    // Confirm overwriting
+    const confirmGenerate = await domUtils.showModal(
+        'confirm',
+        'Generate New Map?',
+        'This will replace the current map and clear all nations. Are you sure?',
+        { confirmText: 'Generate', denyText: 'Cancel' }
+    );
+
+    if (!confirmGenerate) {
+        domUtils.updateStatus("Map generation cancelled.");
+        return;
+    }
+
+    // --- Start Generation ---
+    // Disable relevant buttons
+    const buttonsToDisable = [cfg.generateMapButton, cfg.saveButton, cfg.loadFlagsButton];
+    const labelsToDisable = [cfg.loadMapLabel, cfg.jsonLoadLabel]; // Assuming these are labels acting as buttons
+
+    buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
+    labelsToDisable.forEach(lbl => { if (lbl) lbl.setAttribute('data-disabled', 'true'); });
+
+    domUtils.updateStatus("Generating map... (This may take some time)");
+    console.log("Map generation started...");
+
+    try {
+        // Define the progress handler function
+        const progressHandler = (progressData) => {
+             let statusText = `Generating: ${progressData.phase || '...'}`;
+             if (progressData.currentStep && progressData.totalSteps) {
+                 const percent = Math.round((progressData.currentStep / progressData.totalSteps) * 100);
+                 statusText += ` (${percent}%)`;
+             } else if (progressData.status) {
+                 statusText += ` - ${progressData.status}`;
+             }
+             domUtils.updateStatus(statusText);
+             // console.log("Generation Progress:", progressData); // Optional detailed log
+        };
+
+        // --- Call the main generator function ---
+        // Pass empty config to use defaults from mapGenConfig.js
+        // Pass the progress handler
+        const generatedMapDataUrl = await generateMap({}, progressHandler);
+
+        if (generatedMapDataUrl) {
+            console.log("Map generation successful, integrating result...");
+            // --- Integrate the generated map into the editor ---
+            const finalMapImage = new Image();
+
+            // Define onload behavior *before* setting src
+            finalMapImage.onload = () => {
+                console.log("Generated map image loaded into Image object.");
+                cfg.setMapImage(finalMapImage);
+
+                // Set MapInfo using dimensions from mapGenConfig
+                cfg.setMapInfo({
+                    name: `Generated Map (${mapGenConfig.GRID_WIDTH}x${mapGenConfig.GRID_HEIGHT})`,
+                    width: mapGenConfig.GRID_WIDTH,
+                    height: mapGenConfig.GRID_HEIGHT,
+                    fileName: "generated_map.png", // Placeholder filename
+                    fileType: "image/png"           // Output type from generator
+                });
+
+                // Reset editor state completely for the new map
+                cfg.setNations([]);
+                cfg.setSelectedNationIndex(null);
+                cfg.setHoveredNationIndex(null);
+                cfg.setHoveredListIndex(null);
+                cfg.setDraggingNation(false);
+                cfg.setIsPanning(false);
+                cfg.setPotentialPan(false);
+                domUtils.closeInlineEditor();
+
+                // Adjust canvas and view
+                canvasUtils.setInitialCanvasSize(); // Ensure canvas fits if size changed
+                canvasUtils.resetView();            // Fit the new map & redraw
+
+                // Update UI elements
+                // Enable buttons that make sense with a map loaded
+                if (cfg.saveButton) cfg.saveButton.disabled = false;
+                if (cfg.loadFlagsButton) cfg.loadFlagsButton.disabled = false;
+                if (cfg.jsonLoadLabel) cfg.jsonLoadLabel.removeAttribute('data-disabled');
+
+                domUtils.updateStatus(`Generated new ${mapGenConfig.GRID_WIDTH}x${mapGenConfig.GRID_HEIGHT} map.`);
+                domUtils.updateNationList(); // Clear the nation list display
+                domUtils.updateInfoPanel(null); // Clear the info panel
+                domUtils.updateCursor();        // Reset cursor
+            };
+
+            // Define onerror behavior
+            finalMapImage.onerror = async () => {
+                console.error("Failed to load the generated map image data URL into an Image object.");
+                await domUtils.showModal('alert', 'Error', 'Failed to display the generated map image.');
+                domUtils.updateStatus("Error displaying generated map.", true);
+                // Attempt to clean up state? Maybe reset to placeholder
+                 cfg.setMapImage(null);
+                 cfg.setMapInfo({ name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" });
+                 if(cfg.jsonLoadLabel) cfg.jsonLoadLabel.setAttribute('data-disabled', 'true');
+                 if(cfg.saveButton) cfg.saveButton.disabled = true;
+                 if(cfg.loadFlagsButton) cfg.loadFlagsButton.disabled = true;
+                 cfg.setNations([]);
+                 canvasUtils.resetView(); // Will draw placeholder
+                 domUtils.updateNationList();
+                 domUtils.updateInfoPanel(null);
+            };
+
+            // Set the src to trigger loading
+            finalMapImage.src = generatedMapDataUrl;
+
+        } else {
+            // Handle case where generateMap resolves but with no data
+            throw new Error("Map generation process completed but returned no image data.");
+        }
+
+    } catch (error) {
+        console.error("Map Generation Failed:", error);
+        await domUtils.showModal('alert', 'Generation Error', `Failed to generate map: ${error.message}`);
+        domUtils.updateStatus(`Map generation failed: ${error.message}`, true);
+        // Ensure state reflects failure - potentially reset map image etc. if needed
+        // The 'finally' block will handle re-enabling basic controls.
+    } finally {
+        console.log("Map generation process finished (success or failure). Re-enabling controls.");
+        // --- Re-enable controls ---
+        // Always allow generating or loading a new map
+        if (cfg.generateMapButton) cfg.generateMapButton.disabled = false;
+        if (cfg.loadMapLabel) cfg.loadMapLabel.removeAttribute('data-disabled');
+
+        // Only enable JSON/Flags/Save if a map actually exists now
+        if (cfg.mapImage) {
+            if (cfg.jsonLoadLabel) cfg.jsonLoadLabel.removeAttribute('data-disabled');
+            if (cfg.loadFlagsButton) cfg.loadFlagsButton.disabled = false;
+            if (cfg.saveButton) cfg.saveButton.disabled = false;
+        } else {
+             if (cfg.jsonLoadLabel) cfg.jsonLoadLabel.setAttribute('data-disabled', 'true');
+             if (cfg.loadFlagsButton) cfg.loadFlagsButton.disabled = true;
+             if (cfg.saveButton) cfg.saveButton.disabled = true;
+        }
+    }
+}
+
 
 // --- Run Initialization ---
 // Use DOMContentLoaded to ensure the initial HTML is parsed

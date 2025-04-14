@@ -10,6 +10,7 @@ export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv; // Added for populating HTML
+export let generateMapButton; // <<<--- ADDED
 
 // --- State Variables ---
 let _markerRadius = 8;
@@ -107,6 +108,7 @@ export function assignElements() {
     nationTextSizeValue = document.getElementById('nationTextSizeValue');
     flagSizeInput = document.getElementById('flagSizeInput');
     flagSizeValue = document.getElementById('flagSizeValue');
+    generateMapButton = document.getElementById('generateMapButton'); // <<<--- ADDED
 }
 
 // --- State Modifiers (Setters) ---

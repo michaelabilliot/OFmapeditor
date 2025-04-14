@@ -18,7 +18,15 @@
      <div id="main-container">
         <h1>OpenFront Map Editor</h1>
 
-        <div id="controls"> <!-- Populated by JS --> </div>
+        <div id="controls">
+             <!-- Existing controls populated by JS -->
+             <!-- Manually add the Generate Map button here if populateDynamicElements won't cover it,
+                  OR ensure populateDynamicElements adds it.
+                  Assuming populateDynamicElements adds the initial buttons, we add this one manually for clarity -->
+            <div class="control-group">
+                <button id="generateMapButton">Generate New Map</button>
+            </div>
+        </div>
 
          <div id="top-info">
             <div id="coordinateDisplay">X: ---, Y: ---</div>
