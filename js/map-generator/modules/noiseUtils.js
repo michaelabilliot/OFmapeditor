@@ -1,10 +1,9 @@
 // --- START OF FILE js/map-generator/modules/noiseUtils.js ---
 // --- Noise Utility Wrapper ---
 
-// Import using the specific path provided.
-// IMPORTANT: Ensure your environment can handle importing .ts files directly,
-// or compile this file to .js first and import the .js version.
-import SimplexNoise from '/Users/emirhankurtalanli/Documents/OFmapeditor/node_modules/simplex-noise/simplex-noise.ts'; // <<<--- UPDATED PATH
+// Import the COPIED Javascript file using a RELATIVE path from THIS file's location.
+// This file is in 'modules/', so '../lib/' goes up one level and then into 'lib'.
+import SimplexNoise from '../lib/simplex-noise.js';
 
 let simplex;
 let seed = 'default seed';
@@ -15,29 +14,50 @@ let seed = 'default seed';
  */
 export function init(initialSeed) {
     seed = initialSeed || 'default seed';
-    // SimplexNoise might be a class or a function depending on the export
+    console.log("[noiseUtils] Attempting to initialize SimplexNoise..."); // Added log
     try {
-        if (typeof SimplexNoise === 'function' && SimplexNoise.prototype && SimplexNoise.prototype.constructor.name === 'SimplexNoise') {
-            // Looks like a class constructor
+        // Reset simplex instance in case of re-initialization
+        simplex = null;
+
+        // CommonJS Module Check (if the library uses module.exports = SimplexNoise)
+        if (typeof SimplexNoise === 'function' && SimplexNoise.prototype?.constructor?.name) {
+            console.log("[noiseUtils] Initializing as new SimplexNoise(seed)");
             simplex = new SimplexNoise(seed);
-        } else if (typeof SimplexNoise === 'function') {
-             // Might be a factory function
+        }
+        // ES Module Default Export Check (export default class SimplexNoise)
+        else if (typeof SimplexNoise?.default === 'function' && SimplexNoise.default.prototype?.constructor?.name) {
+            console.log("[noiseUtils] Initializing as new SimplexNoise.default(seed)");
+            simplex = new SimplexNoise.default(seed);
+        }
+        // Factory Function Check (export default function(seed) { ... })
+        else if (typeof SimplexNoise === 'function') {
+             console.log("[noiseUtils] Initializing by calling SimplexNoise(seed)");
              simplex = SimplexNoise(seed);
-             // Check if the returned object has the expected method
+             // Verify the result of the function call
              if (typeof simplex?.noise2D !== 'function') {
-                  throw new Error("SimplexNoise function did not return expected object.");
-             }
-        } else {
-            // Could be an object with methods directly (less common for simplex libraries)
-            simplex = SimplexNoise;
-             if (typeof simplex?.noise2D !== 'function') {
-                  throw new Error("SimplexNoise import is not a class, function, or expected object.");
+                 console.warn("[noiseUtils] SimplexNoise called as function, but result lacks noise2D. Trying object access.");
+                 simplex = SimplexNoise; // Fallback: maybe it's just an object exported
              }
         }
-        console.log(`Noise generator initialized with seed: "${seed}"`);
+        // Direct Object Export Check (export const noise2D = ...)
+        else if (typeof SimplexNoise?.noise2D === 'function') {
+            console.log("[noiseUtils] Using SimplexNoise directly as an object with methods");
+            simplex = SimplexNoise; // Use the imported object directly
+        }
+        else {
+            throw new Error("Could not determine how to instantiate or use the imported SimplexNoise module.");
+        }
+
+        // Final check after attempting initialization
+        if (!simplex || typeof simplex.noise2D !== 'function') {
+             throw new Error("Initialization succeeded but simplex.noise2D is not a function.");
+        }
+
+        console.log(`[noiseUtils] Noise generator initialized successfully with seed: "${seed}"`);
+
     } catch (e) {
-         console.error("Failed to initialize SimplexNoise:", e);
-         console.error("Ensure the imported module is compatible and the path is correct.");
+         console.error("[noiseUtils] Failed to initialize SimplexNoise:", e);
+         console.error("[noiseUtils] Ensure 'js/map-generator/lib/simplex-noise.js' exists and is valid JS.");
          simplex = null; // Ensure simplex is null if init fails
     }
 }
@@ -50,21 +70,13 @@ export function init(initialSeed) {
  */
 export function getNoise2D(x, y) {
     if (!simplex) {
-        console.warn("Noise generator not initialized or failed to initialize. Returning 0.");
-        // Attempt recovery? Or just return 0/random? Let's return 0 for now.
-        // init(Date.now().toString()); // Avoid re-init on every call if it failed once
+        // console.warn("[noiseUtils] Noise generator not initialized. Returning 0."); // Less noisy log
         return 0;
     }
     try {
-        // Check if the library uses a method directly or needs instantiation
-         if (typeof simplex.noise2D === 'function') {
-             return simplex.noise2D(x, y);
-         } else {
-             console.error("simplex.noise2D is not a function");
-             return 0;
-         }
+        return simplex.noise2D(x, y);
     } catch (e) {
-        console.error("Error calling noise2D:", e);
+        console.error("[noiseUtils] Error calling noise2D:", e);
         return 0;
     }
 }
@@ -94,9 +106,7 @@ export function getFBM(x, y, octaves, persistence, lacunarity, initialFrequency)
     }
 
     // Normalize to be roughly between -1 and 1
-    // Avoid division by zero if maxValue is 0 (e.g., octaves = 0 or persistence = 0)
     return maxValue === 0 ? 0 : total / maxValue;
 }
 
-// --- Add other noise functions if needed (e.g., 3D, ridge noise) ---
 // --- END OF FILE js/map-generator/modules/noiseUtils.js ---
