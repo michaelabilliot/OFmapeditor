@@ -1,3 +1,4 @@
+"use strict";
 /*
  * A fast javascript implementation of simplex noise by Jonas Wagner
 
@@ -26,6 +27,8 @@ Better rank ordering method by Stefan Gustavson in 2012.
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.buildPermutationTable = exports.createNoise4D = exports.createNoise3D = exports.createNoise2D = void 0;
 // these __PURE__ comments help uglifyjs with dead code removal
 //
 const SQRT3 = /*#__PURE__*/ Math.sqrt(3.0);
@@ -80,7 +83,7 @@ const grad4 = /*#__PURE__*/ new Float64Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1,
  * @param random the random function that will be used to build the permutation table
  * @returns {NoiseFunction2D}
  */
-export function createNoise2D(random = Math.random) {
+function createNoise2D(random = Math.random) {
     const perm = buildPermutationTable(random);
     // precalculating this yields a little ~3% performance improvement.
     const permGrad2x = new Float64Array(perm).map(v => grad2[(v % 12) * 2]);
@@ -153,12 +156,13 @@ export function createNoise2D(random = Math.random) {
         return 70.0 * (n0 + n1 + n2);
     };
 }
+exports.createNoise2D = createNoise2D;
 /**
  * Creates a 3D noise function
  * @param random the random function that will be used to build the permutation table
  * @returns {NoiseFunction3D}
  */
-export function createNoise3D(random = Math.random) {
+function createNoise3D(random = Math.random) {
     const perm = buildPermutationTable(random);
     // precalculating these seems to yield a speedup of over 15%
     const permGrad3x = new Float64Array(perm).map(v => grad3[(v % 12) * 3]);
@@ -289,12 +293,13 @@ export function createNoise3D(random = Math.random) {
         return 32.0 * (n0 + n1 + n2 + n3);
     };
 }
+exports.createNoise3D = createNoise3D;
 /**
  * Creates a 4D noise function
  * @param random the random function that will be used to build the permutation table
  * @returns {NoiseFunction4D}
  */
-export function createNoise4D(random = Math.random) {
+function createNoise4D(random = Math.random) {
     const perm = buildPermutationTable(random);
     // precalculating these leads to a ~10% speedup
     const permGrad4x = new Float64Array(perm).map(v => grad4[(v % 32) * 4]);
@@ -440,13 +445,14 @@ export function createNoise4D(random = Math.random) {
         return 27.0 * (n0 + n1 + n2 + n3 + n4);
     };
 }
+exports.createNoise4D = createNoise4D;
 /**
  * Builds a random permutation table.
  * This is exported only for (internal) testing purposes.
  * Do not rely on this export.
  * @private
  */
-export function buildPermutationTable(random) {
+function buildPermutationTable(random) {
     const tableSize = 512;
     const p = new Uint8Array(tableSize);
     for (let i = 0; i < tableSize / 2; i++) {
@@ -463,4 +469,5 @@ export function buildPermutationTable(random) {
     }
     return p;
 }
+exports.buildPermutationTable = buildPermutationTable;
 //# sourceMappingURL=simplex-noise.js.map
