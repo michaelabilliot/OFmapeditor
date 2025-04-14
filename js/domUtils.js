@@ -156,14 +156,9 @@ export function updateNationList() {
         const li = document.createElement('li');
         li.textContent = 'No nations added yet.';
         li.style.fontStyle = 'italic'; // Style the placeholder text
+        li.style.opacity = '0.7';
         cfg.nationListUl.appendChild(li);
     } else {
-        // Sort nations alphabetically for the list display? Optional.
-        // const sortedNations = [...cfg.nations].sort((a, b) => a.name.localeCompare(b.name));
-        // sortedNations.forEach((nation, displayIndex) => {
-        // const originalIndex = cfg.nations.findIndex(n => n === nation); // Need original index for actions
-
-        // Sticking to original order for now:
         cfg.nations.forEach((nation, index) => {
             const li = document.createElement('li');
             li.dataset.index = index; // Store the original index
@@ -396,8 +391,9 @@ export function closeInlineEditor() {
     if (!cfg.inlineEditPanel) return;
     // Only change status if the editor was actually open
     if (cfg.inlineEditPanel.style.display === 'block' && cfg.nationIndexBeingEdited !== null) {
-        const nationName = cfg.nations[cfg.nationIndexBeingEdited]?.name || 'nation';
-        // updateStatus(`Finished editing ${nationName}.`); // Optional: Indicate finished/cancelled
+        // Optional: Indicate finished/cancelled
+        // const nationName = cfg.nations[cfg.nationIndexBeingEdited]?.name || 'nation';
+        // updateStatus(`Finished editing ${nationName}.`);
     }
     cfg.inlineEditPanel.style.display = 'none';
     cfg.setNationIndexBeingEdited(null); // Clear the index being edited
@@ -418,9 +414,6 @@ export function applySettings() {
     const newMarkerRadius = parseInt(cfg.markerSizeInput.value, 10);
     const newNationTextSize = parseInt(cfg.nationTextSizeInput.value, 10);
     const newFlagSize = parseInt(cfg.flagSizeInput.value, 10);
-
-    // Add validation if necessary (e.g., ensure values are within expected range)
-    // if (isNaN(newMarkerRadius) || ...) return;
 
     cfg.setMarkerRadius(newMarkerRadius);
     cfg.setNationTextSize(newNationTextSize);
@@ -452,8 +445,6 @@ export function saveSettings() {
         localStorage.setItem('mapEditor_darkMode', cfg.darkModeToggle.checked.toString());
     } catch (e) {
         console.warn("Could not save settings to localStorage:", e);
-        // Optionally inform the user?
-        // showModal('alert', 'Warning', 'Could not save settings. LocalStorage might be disabled or full.');
     }
 }
 
@@ -516,15 +507,13 @@ export function hideModal() {
     cfg.modalOverlay.style.display = 'none';
 
     // --- Crucial: Detach event listeners to prevent memory leaks ---
-    // Use removeEventListener if listeners were added with it, or nullify onclick
     const buttons = [cfg.modalOk, cfg.modalCancel, cfg.modalConfirm, cfg.modalDeny];
     buttons.forEach(btn => { if(btn) btn.onclick = null; });
 
     if(cfg.modalInput) cfg.modalInput.onkeydown = null;
-    if(cfg.modalDialog) cfg.modalDialog.onkeydown = null; // Clear dialog keydown too
+    if(cfg.modalDialog) cfg.modalDialog.onkeydown = null;
 
     // Resolve the promise if it's still pending (e.g., closed via Esc outside buttons)
-    // Check currentModalResolve BEFORE setting it to null
     const resolveFunc = cfg.currentModalResolve;
     cfg.setCurrentModalResolve(null); // Clear the resolve function reference *immediately*
 
@@ -557,18 +546,13 @@ export function showModal(type, title, message, options = {}) {
         // Prevent multiple modals opening simultaneously
         if (cfg.currentModalResolve) {
             console.warn("Modal system busy. Cannot show new modal until previous one is closed.");
-            // Option 1: Fail the new modal
             return resolve(null);
-            // Option 2: Close the old one first? (Risky if user interaction is pending)
-            // hideModal();
         }
         cfg.setCurrentModalResolve(resolve); // Store the resolve function for this modal instance
 
         // --- Configure Modal Content ---
         cfg.modalTitle.textContent = title;
-        // Use innerHTML for message if you need line breaks via <br> or \n in message string
-        // cfg.modalMessage.innerHTML = message.replace(/\n/g, '<br>');
-        cfg.modalMessage.textContent = message; // Safer default
+        cfg.modalMessage.textContent = message; // Use textContent for safety, rely on CSS white-space for line breaks
 
         cfg.modalInputContainer.style.display = 'none'; // Reset input display
         cfg.modalInput.value = options.defaultValue || ''; // Reset input value
@@ -591,7 +575,8 @@ export function showModal(type, title, message, options = {}) {
             case 'alert':
                 cfg.modalOk.textContent = options.okText || 'OK';
                 cfg.modalOk.style.display = 'inline-block';
-                cfg.modalOk.onclick = () => { hideModal(); /* resolve already cleared */ }; // Resolve happens in hideModal now
+                // Wrap resolve logic: call resolve(true) then hideModal
+                cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); };
                 primaryButton = cfg.modalOk;
                 // Handle Enter/Escape key for the whole dialog in alert mode
                 cfg.modalDialog.onkeydown = (e) => {
@@ -607,7 +592,6 @@ export function showModal(type, title, message, options = {}) {
                 cfg.modalDeny.textContent = options.denyText || 'No';
                 cfg.modalConfirm.style.display = 'inline-block';
                 cfg.modalDeny.style.display = 'inline-block';
-                // Resolve directly within the button handlers *before* calling hideModal
                 cfg.modalConfirm.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); };
                 cfg.modalDeny.onclick = () => { cfg.currentModalResolve?.(false); hideModal(); };
                  primaryButton = cfg.modalConfirm;
@@ -626,10 +610,9 @@ export function showModal(type, title, message, options = {}) {
                 cfg.modalCancel.textContent = options.cancelText || 'Cancel';
                 cfg.modalOk.style.display = 'inline-block';
                 cfg.modalCancel.style.display = 'inline-block';
-                // Resolve directly within the button handlers *before* calling hideModal
                 cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(cfg.modalInput.value); hideModal(); };
                 cfg.modalCancel.onclick = () => { cfg.currentModalResolve?.(null); hideModal(); };
-                 primaryButton = cfg.modalOk; // Or maybe modalInput?
+                 primaryButton = cfg.modalInput; // Focus the input field for prompt
                 // Handle Enter key specifically on the input, Escape on the dialog
                 cfg.modalInput.onkeydown = (e) => {
                      if (e.key === 'Enter') {
@@ -643,11 +626,6 @@ export function showModal(type, title, message, options = {}) {
                         cfg.modalCancel.click(); // Trigger Cancel action
                     }
                 };
-                // Focus the input field for prompt
-                 setTimeout(() => { // Use setTimeout to ensure focus works after display change
-                    cfg.modalInput.focus();
-                    cfg.modalInput.select();
-                 }, 0);
                 break;
 
             default:
@@ -662,8 +640,11 @@ export function showModal(type, title, message, options = {}) {
         cfg.modalOverlay.style.display = 'flex';
 
         // Set focus to the primary button or input (use timeout for reliability)
-        if (primaryButton && type !== 'prompt') { // Prompt focuses input field instead
-             setTimeout(() => primaryButton.focus(), 0);
+        if (primaryButton) {
+             setTimeout(() => {
+                 primaryButton.focus();
+                 if (type === 'prompt') primaryButton.select(); // Select text in prompt input
+             }, 0);
         }
     });
 }

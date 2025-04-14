@@ -16,13 +16,17 @@ function initializeApp() {
 
     // 2. Check if essential STATIC elements were found (needed for population)
     // *** This is the crucial check ***
-    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel ) {
-        console.error("Essential static DOM elements not found! Aborting initialization. Check HTML structure and IDs.");
+    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel || !cfg.topInfoDiv ) {
+        console.error("Essential static DOM elements not found! Aborting initialization. Check HTML structure and IDs.", {
+             canvas: !!cfg.canvas, ctx: !!cfg.ctx, statusDiv: !!cfg.statusDiv, settingsPanel: !!cfg.settingsPanel,
+             controlsDiv: !!cfg.controlsDiv, instructionsDiv: !!cfg.instructionsDiv, canvasContainer: !!cfg.canvasContainer,
+             infoPanel: !!cfg.infoPanel, topInfoDiv: !!cfg.topInfoDiv
+         });
         // Provide a user-friendly error message in the body
         document.body.innerHTML = `<div style="padding: 20px; text-align: center;">
             <h1>Initialization Error</h1>
             <p>Could not start the map editor because some essential HTML elements are missing.</p>
-            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel' etc.</p>
+            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel', 'top-info' etc.</p>
             <p>Check the browser console (F12) for more details.</p>
             </div>`;
         return; // Stop initialization
@@ -64,13 +68,14 @@ function initializeApp() {
     if (cfg.canvasContainer) {
         // Use ResizeObserver for efficient monitoring of container size changes
         const resizeObserver = new ResizeObserver(entries => {
-            // We might get multiple entries, but typically only care about the container
-            for (let entry of entries) {
-                if (entry.target === cfg.canvasContainer) {
-                    // Use requestAnimationFrame to debounce slightly and sync with rendering cycle
-                    window.requestAnimationFrame(handlers.handleResize);
-                }
-            }
+            // Use requestAnimationFrame to sync resize handling with browser rendering
+            window.requestAnimationFrame(() => {
+                 for (let entry of entries) {
+                    if (entry.target === cfg.canvasContainer) {
+                        handlers.handleResize(); // Call the handler function
+                    }
+                 }
+            });
         });
         resizeObserver.observe(cfg.canvasContainer);
     } else {
@@ -117,8 +122,9 @@ function setupEventListeners() {
     if (cfg.canvas) {
         cfg.canvas.addEventListener('mousedown', handlers.handleCanvasMouseDown);
         cfg.canvas.addEventListener('mousemove', handlers.handleCanvasMouseMove);
-        cfg.canvas.addEventListener('mouseup', handlers.handleCanvasMouseUp);
-        cfg.canvas.addEventListener('mouseout', handlers.handleCanvasMouseOut);
+        // Use window mouseup/out to catch events even if cursor leaves canvas mid-drag/pan
+        window.addEventListener('mouseup', handlers.handleCanvasMouseUp); // Changed from canvas to window
+        cfg.canvas.addEventListener('mouseout', handlers.handleCanvasMouseOut); // Keep mouseout on canvas
         // Use passive: false for wheel event to allow preventDefault() to stop page scroll
         cfg.canvas.addEventListener('wheel', handlers.handleCanvasWheel, { passive: false });
         cfg.canvas.addEventListener('contextmenu', handlers.handleCanvasContextMenu);

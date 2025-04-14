@@ -74,6 +74,8 @@ function drawTextWithBackground(text, mapX, mapY, baseFontSize, markerRadiusMap)
 
     // Calculate position in canvas (screen) coordinates
     const textCanvasPos = mapToCanvasCoords(mapX, mapY);
+    if (!textCanvasPos) return; // Avoid errors if coords are somehow invalid
+
     const bgX = textCanvasPos.x - textWidth / 2 - padding;
     // Position below the marker, accounting for marker radius (scaled) and padding
     const bgY = textCanvasPos.y + markerRadiusMap * cfg.zoom + padding; // Add scaled radius
@@ -104,6 +106,9 @@ export function drawPlaceholder() {
     const phFg = getCssVariable('--text-color', '#aaa');
     const w = cfg.canvas.width;
     const h = cfg.canvas.height;
+
+    // Ensure canvas has dimensions before drawing
+    if (w <= 0 || h <= 0) return;
 
     cfg.ctx.save();
     cfg.ctx.setTransform(1, 0, 0, 1, 0, 0); // Ensure default transform
@@ -154,7 +159,13 @@ export function redrawCanvas() {
     // Disable smoothing for pixelated look
     cfg.ctx.imageSmoothingEnabled = false;
     try {
-        cfg.ctx.drawImage(cfg.mapImage, 0, 0, cfg.mapInfo.width, cfg.mapInfo.height);
+        // Check if map image is actually loaded and has dimensions
+        if (cfg.mapImage.complete && cfg.mapImage.naturalWidth > 0) {
+            cfg.ctx.drawImage(cfg.mapImage, 0, 0, cfg.mapInfo.width, cfg.mapInfo.height);
+        } else {
+            // Draw placeholder if mapImage exists but isn't ready
+             throw new Error("Map image is not ready to be drawn.");
+        }
     } catch (e) {
         console.error("Error drawing map image:", e);
         // Attempt to draw placeholder on error
@@ -365,14 +376,14 @@ export function resetView() {
         cfg.setOffsetY(0);
     }
 
-    // clampOffset(); // clampOffset is implicitly called by changeZoom/pan, but good practice to ensure validity here if needed.
-    // Instead of calling clampOffset directly, we rely on the fact that the calculated offsets should already be centered.
+    // Ensure resulting offsets are valid (though calculation should be correct)
+    clampOffset();
     updateZoomDisplay();
     redrawCanvas();
 }
 
 export function changeZoom(factor) {
-    if (!cfg.mapImage || cfg.isPanningAnimationActive || !cfg.canvas) return;
+    if (!cfg.mapImage || cfg.isPanningAnimationActive || !cfg.canvas || !cfg.canvas.width || !cfg.canvas.height) return;
 
     const newZoom = Math.max(cfg.minZoom, Math.min(cfg.maxZoom, cfg.zoom * factor));
     if (newZoom === cfg.zoom) return; // No change
@@ -383,6 +394,7 @@ export function changeZoom(factor) {
 
     // Get map coordinates under the canvas center *before* zoom
     const centerMapPosBefore = canvasToMapCoords(centerCanvasX, centerCanvasY);
+    if (!centerMapPosBefore) return; // Avoid error if coords invalid
 
     // Update zoom first
     cfg.setZoom(newZoom);
@@ -396,7 +408,7 @@ export function changeZoom(factor) {
     redrawCanvas();
 
     // Update hover state after zoom, as the mouse might be over a different element now
-    // Re-calculate map position under cursor (should be same as centerMapPosBefore if math is right)
+    // Recalculate map position under cursor (should be same as centerMapPosBefore if math is right)
     const currentMapPos = canvasToMapCoords(centerCanvasX, centerCanvasY);
     if (currentMapPos) {
         cfg.setHoveredNationIndex(getNationAtPos(currentMapPos));
@@ -411,7 +423,7 @@ function easeOutCubic(t) { // t goes from 0 to 1
 }
 
 export function smoothPanTo(targetMapX, targetMapY, duration = 300) {
-    if (cfg.isPanningAnimationActive || !cfg.canvas || !cfg.mapImage) return; // Prevent concurrent animations or animating without map/canvas
+    if (cfg.isPanningAnimationActive || !cfg.canvas || !cfg.mapImage || !cfg.canvas.width || !cfg.canvas.height) return; // Prevent concurrent animations or animating without map/canvas/dims
 
     cfg.setIsPanningAnimationActive(true);
     updateCursor(); // Show default cursor during animation
@@ -451,8 +463,8 @@ export function smoothPanTo(targetMapX, targetMapY, duration = 300) {
             cfg.setIsPanningAnimationActive(false);
             updateCursor(); // Restore appropriate cursor
             // Final clamp and redraw might be needed if clamping adjusted the final step
-            clampOffset();
-            redrawCanvas();
+            // clampOffset(); // Redundant as it was clamped in last step
+            // redrawCanvas(); // Redundant as it was drawn in last step
         } else {
             // Request the next frame if not finished
             requestAnimationFrame(step);
@@ -467,10 +479,20 @@ export function smoothPanTo(targetMapX, targetMapY, duration = 300) {
 export function setInitialCanvasSize() {
     if (!cfg.canvas || !cfg.canvasContainer) return;
     // Use integer values for canvas dimensions to avoid potential sub-pixel issues
-    cfg.canvas.width = Math.floor(cfg.canvasContainer.clientWidth);
-    cfg.canvas.height = Math.floor(cfg.canvasContainer.clientHeight);
-    // Don't call resetView here, main.js handles initial drawing/view setup after map load
-    updateZoomDisplay(); // Update display even if view isn't reset yet
+    const newWidth = Math.floor(cfg.canvasContainer.clientWidth);
+    const newHeight = Math.floor(cfg.canvasContainer.clientHeight);
+
+    // Only update and redraw if size actually changed
+    if (cfg.canvas.width !== newWidth || cfg.canvas.height !== newHeight) {
+        cfg.canvas.width = newWidth;
+        cfg.canvas.height = newHeight;
+        // Don't call resetView here, main.js handles initial drawing/view setup after map load
+        // We might need to redraw if the canvas was already displaying something
+        if (cfg.mapImage || !cfg.mapImage) { // Redraw placeholder or map if size changes
+            redrawCanvas();
+        }
+    }
+     updateZoomDisplay(); // Update display even if view isn't reset yet
 }
 
 // --- END OF FILE js/canvasUtils.js ---

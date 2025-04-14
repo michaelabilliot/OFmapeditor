@@ -20,23 +20,19 @@
 
      <!-- Main Application Container -->
      <div id="main-container">
-        <h1>OpenFront Map Editor</h1>
-
-        <!-- Controls Bar (Populated by JS) -->
+        <!-- Header Row -->
+        <h1 id="main-title">OpenFront Map Editor</h1>
         <div id="controls"> <!-- Populated by JS --> </div>
-
-         <!-- Top Info Bar (Coordinates and Status) -->
-         <div id="top-info">
+        <div id="top-info">
             <div id="coordinateDisplay">X: ---, Y: ---</div>
             <div id="status">Load a map image to begin...</div>
          </div>
 
         <!-- Main Editor Area (Instructions, Canvas, Info Panel) -->
-        <div id="editor-area">
-            <!-- Instructions Panel (Populated by JS) -->
+        <!-- This div might become redundant with CSS Grid, check style.css -->
+        <!-- <div id="editor-area"> -->
             <div id="instructions"> <!-- Populated by JS --> </div>
 
-            <!-- Canvas Container -->
             <div id="canvas-container">
                 <canvas id="mapCanvas" tabindex="0"> <!-- Added tabindex to allow focus -->
                     Your browser does not support the HTML5 canvas element.
@@ -54,8 +50,7 @@
                  </div>
             </div>
 
-            <!-- Info Panel (Nation Details and List) -->
-             <div id="info-panel">
+            <div id="info-panel">
                  <h3>Nation Info</h3>
                  <div id="info-content">
                      <!-- Flag Section -->
@@ -82,7 +77,7 @@
                     </ul>
                  </div>
              </div>
-        </div>
+        <!-- </div> -->
     </div>
 
     <!-- Modal Structure (Hidden by default) -->

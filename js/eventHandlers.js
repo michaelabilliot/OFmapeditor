@@ -8,14 +8,15 @@ import * as nationUtils from './nationUtils.js';
 
 // --- Map Loading Events ---
 export async function handleMapLoadClick(event) {
+    // --- ADDED preventDefault ---
+    event.preventDefault(); // Prevent the label's default action of triggering the input
+    // --------------------------
+
     if (!cfg.imageInput) {
         console.error("Map image input element not found!");
         domUtils.showModal('alert', 'Error', 'Cannot find map image input element. Check HTML ID.');
         return;
     }
-    // Prevent the label default behavior if needed, but usually fine
-    // event.preventDefault();
-
     // Optional: Confirm overwrite if a map is already loaded?
     // if (cfg.mapImage) {
     //     const confirm = await domUtils.showModal('confirm', 'Load New Map?', 'Loading a new map will clear current nations. Continue?');
@@ -29,10 +30,10 @@ export async function handleMapLoadClick(event) {
 export async function handleMapFileSelect(event) {
     const file = event.target.files?.[0]; // Use optional chaining
     if (file) {
+        // Process the selected file
         await mapUtils.handleMapImageLoad(file);
     }
-    // Resetting value here might be redundant if handleMapLoadClick already does it.
-    // event.target.value = '';
+    // No need to clear value here again, handleMapLoadClick already does it before click()
 }
 
 // --- JSON Loading Events ---
@@ -53,7 +54,10 @@ export async function handleJsonFileSelect(event) {
 // --- Canvas Interaction Events ---
 export function handleCanvasMouseDown(event) {
     // Ignore if not left click, modal is open, animating, or essential elements missing
-    if (event.button !== 0 || cfg.currentModalResolve || cfg.isPanningAnimationActive || !cfg.mapImage || !cfg.inlineEditPanel) return;
+    if (event.button !== 0 || cfg.currentModalResolve || cfg.isPanningAnimationActive || !cfg.mapImage || !cfg.inlineEditPanel || !cfg.canvas) return;
+
+    // Focus the canvas when interacting with it (allows keyboard events like Delete)
+    cfg.canvas.focus();
 
     const canvasPos = canvasUtils.getCanvasMousePos(event);
     if (!canvasPos) return;
@@ -119,12 +123,6 @@ export function handleCanvasMouseMove(event) {
     const canvasPos = canvasUtils.getCanvasMousePos(event);
     if (!canvasPos) {
         domUtils.updateCoordinateDisplay(null); // Clear coordinates if mouse leaves canvas
-        // Optionally clear hover state if mouse leaves?
-        // if (cfg.hoveredNationIndex !== null) {
-        //     cfg.setHoveredNationIndex(null);
-        //     domUtils.updateCursor();
-        //     canvasUtils.redrawCanvas();
-        // }
         return;
     }
 
@@ -177,8 +175,6 @@ export function handleCanvasMouseMove(event) {
         nation.coordinates[0] = mapPos.x - cfg.dragNationOffset.x;
         nation.coordinates[1] = mapPos.y - cfg.dragNationOffset.y;
         needsRedraw = true;
-        // No status update during drag, only on mouseup
-        // No nation list update during drag, only on mouseup
     }
     // --- Handle Hovering (only if not panning, potentially panning, or dragging) ---
     else if (!cfg.potentialPan && !cfg.isPanning && !cfg.draggingNation) {
@@ -206,7 +202,6 @@ export async function handleCanvasMouseUp(event) {
     // --- Handle Potential Pan -> Add Nation OR Finalize Short Pan ---
     if (cfg.potentialPan) {
         cfg.setPotentialPan(false); // Reset flag first
-        domUtils.updateCursor(); // Update cursor immediately
 
         // Check if mouse moved significantly - if not, treat as a click to add
         const canvasPos = canvasUtils.getCanvasMousePos(event);
@@ -226,17 +221,16 @@ export async function handleCanvasMouseUp(event) {
              } else {
                  // Mouse moved beyond threshold: Treat as a completed short pan
                  // Panning state was handled in mousemove, offset is already updated.
-                 domUtils.updateStatus("Pan finished."); // Or provide no status update
+                 domUtils.updateStatus("Pan finished.");
              }
         } else {
             // Could not get canvas pos on mouseup? Unlikely but handle.
             domUtils.updateStatus("Action cancelled (position error).");
         }
 
-        // Reset potential pan related states
+        // Reset potential pan related states regardless of outcome
         cfg.setIsPanning(false); // Ensure panning is also false if it was a short pan
         domUtils.updateCursor();
-        // No redraw needed here usually, handleAddNation or mousemove handled it.
         return; // Exit, action determined (add or short pan)
     }
 
@@ -245,7 +239,6 @@ export async function handleCanvasMouseUp(event) {
         cfg.setIsPanning(false);
         domUtils.updateCursor();
         domUtils.updateStatus("Pan finished.");
-        // No redraw needed here, last mousemove handled it and updated offset
     }
 
     // --- Handle End of Dragging Nation ---
@@ -254,10 +247,6 @@ export async function handleCanvasMouseUp(event) {
         domUtils.updateCursor();
         if (cfg.selectedNationIndex !== null && cfg.nations[cfg.selectedNationIndex]) {
             const nation = cfg.nations[cfg.selectedNationIndex];
-             // Optional: Clamp final coordinates to map boundaries?
-             // nation.coordinates[0] = Math.max(0, Math.min(cfg.mapInfo.width, nation.coordinates[0]));
-             // nation.coordinates[1] = Math.max(0, Math.min(cfg.mapInfo.height, nation.coordinates[1]));
-
             domUtils.updateStatus(`Placed ${nation.name}.`);
             domUtils.updateNationList(); // Update list with final coordinates
             canvasUtils.redrawCanvas(); // Final redraw at new position
@@ -294,15 +283,14 @@ export function handleCanvasMouseOut(event) {
          cfg.setDraggingNation(false);
          needsCursorUpdate = true;
          statusUpdate = `Drag of ${nationName} cancelled (mouse left canvas).`;
-         // Redraw needed to remove drag styles if any (though cursor handles visual)
          needsRedraw = true;
          domUtils.updateNationList(); // Update list with last known coords
      }
      // If mouse leaves canvas while hovering, clear hover state
      if (cfg.hoveredNationIndex !== null) {
          cfg.setHoveredNationIndex(null);
-         needsCursorUpdate = true; // Cursor needs update
-         needsRedraw = true; // Redraw needed to remove hover highlight
+         needsCursorUpdate = true;
+         needsRedraw = true;
      }
 
      if (needsCursorUpdate) {
@@ -321,7 +309,7 @@ export function handleCanvasContextMenu(event) {
 }
 
 export function handleCanvasWheel(event) {
-     if (!cfg.mapImage || cfg.isPanningAnimationActive) return;
+     if (!cfg.mapImage || cfg.isPanningAnimationActive || !cfg.canvas) return;
 
      event.preventDefault(); // Prevent page scrolling
 
@@ -331,7 +319,8 @@ export function handleCanvasWheel(event) {
      // Determine zoom factor based on wheel delta
      // Normalize deltaY across browsers (usually +/- 100, but can vary)
      const delta = Math.max(-1, Math.min(1, (-event.deltaY || -event.detail || event.wheelDelta)));
-     const factor = 1 + delta * (cfg.zoomSensitivity * 100); // Adjust sensitivity scaling if needed
+     // Use the configured sensitivity
+     const factor = 1 + delta * (cfg.zoomSensitivity * 100); // Sensitivity applied here
 
      // --- Zoom towards mouse cursor ---
      // Get map coordinates under cursor *before* zoom
@@ -389,12 +378,16 @@ export async function handleDocumentKeyDown(event) {
 
     // --- Ignore most other shortcuts if a modal is open, a general input is focused, or animating ---
     if (cfg.currentModalResolve || cfg.isPanningAnimationActive || isInputFocused) {
-        // Allow Escape to close modals if needed (modal handles its own Escape generally)
-        // if (event.key === 'Escape' && cfg.currentModalResolve) { /* modal handles this */ }
         return; // Ignore other keys in these states
     }
 
     // --- General keyboard shortcuts (no modal, no animation, no input focus) ---
+    // Check if focus is on the body or canvas (or nothing specific) before acting
+     if (activeElement !== document.body && activeElement !== cfg.canvas && activeElement !== null) {
+         return; // Don't steal keys if focus is elsewhere unexpectedly
+     }
+
+
     switch (event.key) {
         case 's':
         case 'S':
@@ -434,18 +427,16 @@ export async function handleDocumentKeyDown(event) {
         case '+': // Numpad + or regular + (might need Shift)
         case '=': // Regular = (often shares key with +)
             event.preventDefault();
-            canvasUtils.changeZoom(1.2); // Zoom In
+            canvasUtils.changeZoom(1.25); // Zoom In (Adjust factor as needed)
             break;
         case '-': // Numpad - or regular -
-        // case '_': // Regular _ (often needs Shift with -) - Avoid using shift variants if possible
             event.preventDefault();
-            canvasUtils.changeZoom(1 / 1.2); // Zoom Out
+            canvasUtils.changeZoom(1 / 1.25); // Zoom Out (Adjust factor as needed)
             break;
         case '0': // Numpad 0 or regular 0
             event.preventDefault();
             canvasUtils.resetView(); // Reset Zoom and Pan
             break;
-        // Add other keyboard shortcuts here
     }
 }
 
@@ -454,8 +445,6 @@ export function handleSettingsToggle() {
     if (!cfg.settingsPanel) return;
      cfg.setIsSettingsVisible(!cfg.isSettingsVisible);
      cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none';
-     // Optionally focus an element in the panel when opened?
-     // if (cfg.isSettingsVisible && cfg.markerSizeInput) cfg.markerSizeInput.focus();
 }
 
 // --- Flag Upload Events ---
@@ -502,8 +491,9 @@ export async function handleFlagUploadChange(event) {
         canvasUtils.redrawCanvas();
         domUtils.updateStatus(`Flag set for ${nation.name}.`);
     } catch (error) {
-        await domUtils.showModal('alert', 'Flag Processing Error', `Could not process flag: ${error.message}`);
-        domUtils.updateStatus(`Error processing flag ${file.name}: ${error.message}`, true);
+        const errorMsg = error instanceof Error ? error.message : "Unknown flag processing error.";
+        await domUtils.showModal('alert', 'Flag Processing Error', `Could not process flag: ${errorMsg}`);
+        domUtils.updateStatus(`Error processing flag ${file.name}: ${errorMsg}`, true);
         // Update UI to reflect failure (e.g., remove preview if it failed)
         domUtils.updateInfoPanel(cfg.selectedNationIndex);
         canvasUtils.redrawCanvas(); // Redraw in case visual state needs reset
@@ -518,7 +508,7 @@ export async function handleFlagRemoveClick() {
 
      const nation = cfg.nations[cfg.selectedNationIndex];
      // Check if there's actually a flag (by name or image) to remove
-     if (!nation || (!nation.flag && !nation.flagImage)) {
+     if (!nation || (!nation.flag && !nation.flagImage && !nation.flagData)) { // Check flagData too
          domUtils.updateStatus("No flag to remove for selected nation.");
          return;
      }
@@ -543,8 +533,6 @@ export async function handleFlagRemoveClick() {
 // --- Inline Editor Events ---
 export function handleInlineEditCancel() {
      domUtils.closeInlineEditor();
-     // Optional: Maybe redraw if closing affects hover/selection visuals?
-     // canvasUtils.redrawCanvas();
 }
 
 export async function handleInlineEditSave() {
@@ -554,8 +542,6 @@ export async function handleInlineEditSave() {
 
 // --- Resize Observer Callback ---
 export function handleResize() {
-    // Debounce resize? Usually ResizeObserver handles this well enough.
-    // Add a small delay if needed, but often direct handling is fine.
      if (!cfg.canvas || !cfg.canvasContainer) return;
 
      // Update canvas dimensions based on its container
@@ -564,7 +550,7 @@ export function handleResize() {
      // Adjust offset/view if needed (clampOffset is often sufficient)
      canvasUtils.clampOffset(); // Ensure offset is valid for new size
 
-     // Redraw the canvas with the new size
+     // Redraw the canvas with the new size (setInitialCanvasSize might already redraw)
      canvasUtils.redrawCanvas();
 }
 

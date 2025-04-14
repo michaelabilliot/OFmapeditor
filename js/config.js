@@ -10,6 +10,7 @@ export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
+export let topInfoDiv; // Added for layout reference
 
 // --- State Variables ---
 let _markerRadius = 8;
@@ -28,7 +29,9 @@ export let offsetX = 0;
 export let offsetY = 0;
 export const minZoom = 0.05;
 export const maxZoom = 25.0;
-export const zoomSensitivity = 0.001;
+// --- ADJUSTED ZOOM SENSITIVITY ---
+export const zoomSensitivity = 0.0005; // Reduced from 0.001 to make zoom slower
+// ---------------------------------
 export let isPanning = false;
 export let draggingNation = false;
 export let potentialPan = false;
@@ -40,27 +43,25 @@ export let currentModalResolve = null;
 export let isPanningAnimationActive = false;
 
 // --- Getters for state variables that need setters ---
-// This allows reading them directly like cfg.markerRadius()
 export const markerRadius = () => _markerRadius;
 export const nationTextSize = () => _nationTextSize;
 export const flagBaseDisplaySize = () => _flagBaseDisplaySize;
 
 // --- Function to assign elements after DOM load ---
-// NOTE: Called twice in main.js - once for static elements, then again after populateDynamicElements
 export function assignElements() {
+    // Assign static layout containers first
     canvas = document.getElementById('mapCanvas');
     canvasContainer = document.getElementById('canvas-container');
-    // Get context only if canvas exists
-    ctx = canvas ? canvas.getContext('2d') : null;
-
-    // Assign elements present in static HTML first
     settingsButton = document.getElementById('settingsButton');
     settingsPanel = document.getElementById('settingsPanel');
     controlsDiv = document.getElementById('controls');
     coordinateDisplay = document.getElementById('coordinateDisplay');
     statusDiv = document.getElementById('status');
     instructionsDiv = document.getElementById('instructions');
-    infoPanel = document.getElementById('info-panel'); // *** ADDED THIS LINE ***
+    infoPanel = document.getElementById('info-panel');
+    topInfoDiv = document.getElementById('top-info'); // Assign top-info container
+
+    // Assign interactive elements that exist in base HTML
     inlineEditPanel = document.getElementById('inlineEditPanel');
     inlineEditName = document.getElementById('inlineEditName');
     inlineEditStrength = document.getElementById('inlineEditStrength');
@@ -89,8 +90,11 @@ export function assignElements() {
     modalConfirm = document.getElementById('modal-confirm');
     modalDeny = document.getElementById('modal-deny');
 
-    // Assign elements that are dynamically added by populateDynamicElements
-    // These might be null on the first call, but will be found on the second call in main.js
+    // Get canvas context if canvas exists
+    ctx = canvas ? canvas.getContext('2d') : null;
+
+    // Assign elements dynamically added by populateDynamicElements
+    // These might be null on the first call in main.js
     imageInput = document.getElementById('mapImageInput');
     loadMapLabel = document.getElementById('loadMapLabel');
     jsonLoadInput = document.getElementById('jsonLoadInput');

@@ -22,9 +22,7 @@
     --link-color: #007bff;
     --marker-text-bg: rgba(0, 0, 0, 0.7);
     --marker-text-color: #FFFFFF;
-    --container-bg: transparent; /* Canvas container background */
     --selected-border-color: cyan;
-    --hover-overlay-color: rgba(255, 255, 255, 0.3); /* Not currently used */
     --strength-1-color: rgba(0, 180, 0, 0.8); /* Green - Square */
     --strength-2-color: rgba(255, 215, 0, 0.8); /* Yellow/Gold - Triangle */
     --strength-3-color: rgba(255, 0, 0, 0.8); /* Red - Circle >=3 */
@@ -38,6 +36,9 @@
     --info-flag-bg: #eee;
     --info-status-color: #666;
     --hr-color: #ddd;
+    --panel-width-instructions: 220px; /* Define panel widths */
+    --panel-width-info: 240px;
+    --layout-gap: 10px;
 }
 
 body.dark-mode {
@@ -58,21 +59,18 @@ body.dark-mode {
     --button-info-text-color: #1c1c1c;
     --input-bg-color: #444;
     --input-border-color: #666;
-    /* --disabled-opacity: 0.6; */ /* Keep the same */
     --highlight-color: #ff6666;
-    --status-error-color: #ff8a8a; /* Slightly less harsh red */
+    --status-error-color: #ff8a8a;
     --link-color: #58a6ff;
-     --marker-text-bg: rgba(255, 255, 255, 0.7); /* Light background for dark text */
-     --marker-text-color: #000000; /* Black text */
-     /* --container-bg: transparent; */ /* Keep the same */
-     --selected-border-color: #00ffff; /* Cyan */
-     /* --hover-overlay-color: rgba(0, 0, 0, 0.3); */ /* Keep the same */
-     --strength-1-color: rgba(0, 220, 0, 0.8); /* Brighter Green */
-     --strength-2-color: rgba(255, 235, 59, 0.8); /* Brighter Yellow */
-     --strength-3-color: rgba(255, 82, 82, 0.8); /* Brighter Red */
-     --strength-default-color: rgba(160, 160, 160, 0.8); /* Lighter Gray */
-     --marker-outline-color: #DDDDDD; /* Light outline */
-     --modal-overlay-bg: rgba(0, 0, 0, 0.7); /* Darker overlay */
+     --marker-text-bg: rgba(255, 255, 255, 0.7);
+     --marker-text-color: #000000;
+     --selected-border-color: #00ffff;
+     --strength-1-color: rgba(0, 220, 0, 0.8);
+     --strength-2-color: rgba(255, 235, 59, 0.8);
+     --strength-3-color: rgba(255, 82, 82, 0.8);
+     --strength-default-color: rgba(160, 160, 160, 0.8);
+     --marker-outline-color: #DDDDDD;
+     --modal-overlay-bg: rgba(0, 0, 0, 0.7);
      --modal-bg-color: #3a3a3a;
      --modal-border-color: #666;
      --modal-text-color: #e0e0e0;
@@ -92,37 +90,54 @@ html, body {
 }
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 5px; /* Small padding around the edges */
     background-color: var(--bg-color);
     color: var(--text-color);
     box-sizing: border-box;
     position: relative;
     transition: background-color 0.3s, color 0.3s;
-}
-#main-container {
-    width: 100%;
-    display: flex;
+    /* Remove body padding, handle spacing via grid */
+    padding: 0;
+    /* Let main-container handle height */
+    height: 100vh; /* Full viewport height */
+    display: flex; /* Keep body as flex container for main */
     flex-direction: column;
-    align-items: center;
-    flex-grow: 1; /* Take remaining vertical space */
-    height: calc(100% - 20px); /* Adjust based on body padding */
-    max-width: 1600px; /* Optional: Max width for very large screens */
-    margin: 0 auto; /* Center max-width container */
-}
-h1 {
-    color: var(--text-color);
-    margin-bottom: 8px;
-    margin-top: 0;
-    font-size: 1.4em;
-    text-align: center;
 }
 
-/* Controls Bar */
+/* --- New CSS Grid Layout for #main-container --- */
+#main-container {
+    flex-grow: 1; /* Take remaining space from body */
+    width: 100%;
+    display: grid;
+    /* Rows: Title, Controls, Status, Main Content Area */
+    grid-template-rows: auto auto auto 1fr; /* Auto height for headers, 1fr for content */
+    /* Columns: Instructions, Canvas, Info Panel */
+    grid-template-columns: var(--panel-width-instructions) 1fr var(--panel-width-info);
+    gap: var(--layout-gap);
+    padding: var(--layout-gap); /* Padding around the entire grid */
+    box-sizing: border-box; /* Include padding in size */
+    overflow: hidden; /* Prevent container overflow */
+    height: 100%; /* Ensure it uses the body's flex height */
+
+    /* Define grid areas for easier placement */
+    grid-template-areas:
+        "title     title     title"
+        "controls  controls  controls"
+        "top-info  top-info  top-info"
+        "instr     canvas    info";
+}
+
+/* Assign elements to grid areas */
+#main-title { grid-area: title; text-align: center; margin: 0 0 5px 0; font-size: 1.4em; }
+#controls { grid-area: controls; justify-content: center; max-width: none; width: 100%; margin-bottom: 0;} /* Full width */
+#top-info { grid-area: top-info; max-width: none; width: 100%; margin-bottom: 0; } /* Full width */
+#instructions { grid-area: instr; }
+#canvas-container { grid-area: canvas; }
+#info-panel { grid-area: info; }
+
+/* --- Adjustments for elements within the Grid --- */
+
+/* Controls Bar - Already full width */
 #controls {
-    margin-bottom: 8px;
     background-color: var(--panel-bg-color);
     color: var(--text-color);
     padding: 8px 12px;
@@ -130,169 +145,45 @@ h1 {
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     display: flex;
-    flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
-    gap: 10px; /* Increased gap slightly */
+    flex-wrap: wrap;
+    gap: 10px;
     align-items: center;
-    width: auto; /* Fit content */
-    max-width: 98%; /* Limit width slightly */
-    justify-content: center;
     transition: background-color 0.3s, border-color 0.3s;
+    box-sizing: border-box;
 }
-.control-group {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-/* Visually hide file inputs but keep them accessible */
-input[type="file"].visually-hidden {
-    position: absolute;
-    width: 1px; height: 1px;
-    padding: 0; margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-}
-/* Style labels to look like buttons */
-.file-label-button {
-    padding: 5px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 0.9em;
-    display: inline-block;
-    line-height: normal;
-    text-align: center;
-    user-select: none; /* Prevent text selection */
-}
-.file-label-button:hover {
-    background-color: var(--button-hover-bg-color);
-}
-.file-label-button[data-disabled="true"] {
-    cursor: not-allowed;
-    opacity: var(--disabled-opacity);
-    pointer-events: none; /* Prevent clicks */
-    background-color: var(--button-bg-color); /* Keep base color but faded */
-}
-/* General button styling within controls */
-#controls button {
-    padding: 5px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 0.9em;
-    user-select: none;
-}
-#controls button:disabled {
-    cursor: not-allowed;
-    opacity: var(--disabled-opacity);
-}
-#controls button:hover:not(:disabled) {
-    background-color: var(--button-hover-bg-color);
-}
-/* Specific button colors */
-#loadFlagsButton {
-    background-color: var(--button-info-bg-color);
-    color: var(--button-info-text-color);
-    border-color: var(--button-info-bg-color); /* Match border */
-}
-#loadFlagsButton:hover:not(:disabled) {
-    opacity: 0.9; /* Slight fade on hover */
-    background-color: var(--button-info-bg-color); /* Keep color */
-}
-/* Zoom Controls */
-#zoomControls {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    border-left: 1px solid var(--border-color);
-    padding-left: 8px;
-    margin-left: 3px; /* Small separation */
-}
-#zoomControls button {
-    min-width: 25px; /* Ensure buttons have some width */
-    font-weight: bold;
-    padding: 5px 8px;
-}
-#zoomDisplay {
-    font-size: 0.9em;
-    min-width: 45px; /* Slightly wider */
-    text-align: center;
-    background-color: rgba(0,0,0,0.05);
-    padding: 3px 5px;
-    border-radius: 3px;
-    font-family: monospace;
-    user-select: none;
-}
-body.dark-mode #zoomDisplay {
-    background-color: rgba(255,255,255,0.1);
-}
+.control-group { display: flex; align-items: center; gap: 5px; }
+input[type="file"].visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+.file-label-button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; display: inline-block; line-height: normal; text-align: center; user-select: none; }
+.file-label-button:hover { background-color: var(--button-hover-bg-color); }
+.file-label-button[data-disabled="true"] { cursor: not-allowed; opacity: var(--disabled-opacity); pointer-events: none; background-color: var(--button-bg-color); }
+#controls button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; user-select: none; }
+#controls button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
+#controls button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
+#loadFlagsButton { background-color: var(--button-info-bg-color); color: var(--button-info-text-color); border-color: var(--button-info-bg-color); }
+#loadFlagsButton:hover:not(:disabled) { opacity: 0.9; background-color: var(--button-info-bg-color); }
+#zoomControls { display: flex; align-items: center; gap: 5px; border-left: 1px solid var(--border-color); padding-left: 8px; margin-left: 3px; }
+#zoomControls button { min-width: 25px; font-weight: bold; padding: 5px 8px; }
+#zoomDisplay { font-size: 0.9em; min-width: 45px; text-align: center; background-color: rgba(0,0,0,0.05); padding: 3px 5px; border-radius: 3px; font-family: monospace; user-select: none; }
+body.dark-mode #zoomDisplay { background-color: rgba(255,255,255,0.1); }
 
-/* Status & Coordinate Display */
+/* Status & Coordinate Display - Already full width */
 #top-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
-    max-width: 1100px; /* Limit width */
-    margin: 0 auto 5px auto; /* Center and add bottom margin */
     font-size: 0.9em;
     gap: 10px;
+    box-sizing: border-box;
 }
-#coordinateDisplay {
-    background-color: rgba(0,0,0,0.1);
-    padding: 3px 8px;
-    border-radius: 4px;
-    min-width: 130px; /* Ensure space */
-    text-align: right;
-    font-family: monospace;
-    white-space: nowrap;
-    user-select: none;
-}
-body.dark-mode #coordinateDisplay {
-    background-color: rgba(255,255,255,0.1);
-}
-#status {
-    font-weight: bold;
-    color: var(--text-color);
-    min-height: 1.2em;
-    text-align: center;
-    padding: 3px 8px; /* Match coords padding */
-    border-radius: 4px;
-    flex-grow: 1; /* Take available space */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-#status.error {
-    color: var(--status-error-color);
-    background-color: rgba(255, 0, 0, 0.1); /* Subtle background hint */
-}
-body.dark-mode #status.error {
-    background-color: rgba(255, 80, 80, 0.2);
-}
-
-
-/* Editor Area Layout */
-#editor-area {
-    display: flex;
-    flex-direction: row; /* Side by side layout */
-    align-items: stretch; /* Make panels full height */
-    width: 100%;
-    flex-grow: 1; /* Take remaining vertical space */
-    gap: 10px;
-    overflow: hidden; /* Prevent scrollbars on the area itself */
-    margin-bottom: 5px; /* Space at bottom */
-}
+#coordinateDisplay { background-color: rgba(0,0,0,0.1); padding: 3px 8px; border-radius: 4px; min-width: 130px; text-align: right; font-family: monospace; white-space: nowrap; user-select: none; }
+body.dark-mode #coordinateDisplay { background-color: rgba(255,255,255,0.1); }
+#status { font-weight: bold; color: var(--text-color); min-height: 1.2em; text-align: center; padding: 3px 8px; border-radius: 4px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#status.error { color: var(--status-error-color); background-color: rgba(255, 0, 0, 0.1); }
+body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
 
 /* Instructions Panel */
 #instructions {
+    /* Grid placement handled by grid-area */
     font-size: 0.85em;
     color: var(--text-color);
     background-color: var(--panel-bg-color);
@@ -302,181 +193,88 @@ body.dark-mode #status.error {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: left;
     transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    flex: 0 0 220px; /* Fixed width, don't grow or shrink */
     overflow-y: auto; /* Allow vertical scroll if content overflows */
-    height: 100%; /* Take full height of editor-area */
+    height: 100%; /* Take full height of grid row */
     box-sizing: border-box;
+    display: flex; /* Allow internal flex layout if needed */
+    flex-direction: column;
 }
-#instructions h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
-}
-#instructions ul {
-    padding-left: 15px;
-    margin-top: 5px;
-    margin-bottom: 10px;
-}
-#instructions li {
-    margin-bottom: 4px;
-}
-.highlight {
-    font-weight: bold;
-    color: var(--highlight-color);
-}
+#instructions h3 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
+#instructions ul { padding-left: 15px; margin-top: 5px; margin-bottom: 10px; }
+#instructions li { margin-bottom: 4px; }
+.highlight { font-weight: bold; color: var(--highlight-color); }
 
 /* Canvas Container */
 #canvas-container {
-    flex: 1 1 auto; /* Grow and shrink, base size auto */
-    background-color: var(--container-bg);
-    display: flex; /* Needed for potential centering if canvas is smaller */
+    /* Grid placement handled by grid-area */
+    /* flex: 1 1 auto; Removed flex */
+    background-color: var(--input-bg-color); /* BG color now on container */
+    display: flex;
     justify-content: center;
     align-items: center;
     border: 1px solid var(--border-color);
     overflow: hidden; /* Crucial: prevent canvas overflow */
     position: relative; /* For positioning inline editor */
-    min-width: 300px; /* Ensure it doesn't collapse too much */
-    height: 100%;
+    min-width: 100px; /* Min width */
+    min-height: 200px; /* Min height */
+    height: 100%; /* Take full height of grid row */
     box-sizing: border-box;
 }
 #mapCanvas {
-    display: block; /* Remove extra space below canvas */
-    background-color: var(--input-bg-color); /* Background for empty areas */
-    /* Pixelated rendering for sharp map pixels */
+    display: block;
+    /* background-color: var(--input-bg-color); BG now on container */
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    /* Max width/height not needed if container handles overflow */
-    /* max-width: 100%; */
-    /* max-height: 100%; */
-    /* Default cursor set by JS */
-    outline: none; /* Remove focus outline if tabindex is added */
+    max-width: 100%; /* Ensure canvas doesn't exceed container */
+    max-height: 100%;
+    outline: none;
 }
 
 /* Info Panel */
 #info-panel {
+    /* Grid placement handled by grid-area */
     font-size: 0.9em;
     color: var(--text-color);
     background-color: var(--panel-bg-color);
     border: 1px solid var(--border-color);
-    padding: 0 12px 10px 12px; /* No top padding, rely on h3 margin */
+    padding: 0 12px 10px 12px;
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: left;
     transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    flex: 0 0 240px; /* Fixed width, slightly wider */
     height: 100%;
     box-sizing: border-box;
     display: flex;
     flex-direction: column; /* Stack content vertically */
     overflow: hidden; /* Prevent panel content overflow */
 }
-#info-panel h3 {
-    margin-top: 10px; /* Space above title */
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
-    flex-shrink: 0; /* Prevent title from shrinking */
-}
-#info-content {
-    flex-shrink: 0; /* Prevent shrinking */
-    margin-bottom: 10px;
-}
-#info-panel p {
-    margin: 8px 0;
-    word-wrap: break-word; /* Wrap long text like names */
-}
-#info-placeholder {
-    font-style: italic;
-    opacity: 0.7;
-    font-size: 0.9em;
-    margin-top: 15px;
-}
-#info-panel span#info-name, #info-panel span#info-strength { /* Be more specific */
-    color: var(--link-color); /* Highlight the value */
-    font-weight: bold;
-}
-#info-panel hr {
-    border: none;
-    border-top: 1px solid var(--hr-color);
-    margin: 10px 0;
-    flex-shrink: 0;
-}
-#info-panel h4 {
-    margin: 10px 0 5px 0;
-    font-size: 1em;
-    flex-shrink: 0;
-}
+#info-panel h3 { margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
+#info-content { flex-shrink: 0; margin-bottom: 10px; overflow-y: auto; /* Allow scrolling just for this part if needed */ }
+#info-panel p { margin: 8px 0; word-wrap: break-word; }
+#info-panel strong { }
+#info-placeholder { font-style: italic; opacity: 0.7; font-size: 0.9em; margin-top: 15px; }
+#info-panel span#info-name, #info-panel span#info-strength { color: var(--link-color); font-weight: bold; }
+#info-panel hr { border: none; border-top: 1px solid var(--hr-color); margin: 10px 0; flex-shrink: 0; }
+#info-panel h4 { margin: 10px 0 5px 0; font-size: 1em; flex-shrink: 0; }
 
 /* Info Panel Flag Styles */
-#info-flag-container {
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0; /* Prevent flag section from shrinking */
-}
-#info-flag-preview {
-    max-width: 150px; /* Limit preview size */
-    max-height: 150px;
-    width: auto; /* Maintain aspect ratio */
-    height: auto;
-    border: 1px solid var(--info-flag-border);
-    background-color: var(--info-flag-bg); /* BG for transparent parts */
-    object-fit: contain; /* Ensure whole flag is visible */
-    display: none; /* Hidden by default */
-}
-#info-flag-status {
-    font-size: 0.85em;
-    color: var(--info-status-color);
-    font-style: italic;
-    text-align: center;
-    display: none; /* Hidden by default */
-    word-break: break-all; /* Allow long filenames to wrap */
-    padding: 5px;
-    background-color: var(--info-flag-bg);
-    border: 1px dashed var(--info-flag-border);
-    border-radius: 4px;
-    width: 90%; /* Limit width slightly */
-    box-sizing: border-box;
-}
-#info-flag-controls {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-    justify-content: center;
-}
-#info-flag-upload-label {
-    flex-grow: 1; /* Allow upload button to take space */
-    max-width: 150px; /* Limit width */
-}
-#info-flag-remove-button {
-    padding: 5px 8px;
-    font-size: 0.85em;
-    background-color: var(--button-danger-bg-color);
-    color: var(--button-danger-text-color);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    line-height: normal; /* Align text better */
-}
-#info-flag-remove-button:hover:not(:disabled) {
-    opacity: 0.9;
-}
-#info-flag-remove-button:disabled {
-    cursor: not-allowed;
-    opacity: var(--disabled-opacity);
-}
+#info-flag-container { margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+#info-flag-preview { max-width: 150px; max-height: 150px; width: auto; height: auto; border: 1px solid var(--info-flag-border); background-color: var(--info-flag-bg); object-fit: contain; display: none; }
+#info-flag-status { font-size: 0.85em; color: var(--info-status-color); font-style: italic; text-align: center; display: none; word-break: break-all; padding: 5px; background-color: var(--info-flag-bg); border: 1px dashed var(--info-flag-border); border-radius: 4px; width: 90%; box-sizing: border-box; }
+#info-flag-controls { display: flex; gap: 8px; width: 100%; justify-content: center; }
+#info-flag-upload-label { flex-grow: 1; max-width: 150px; }
+#info-flag-remove-button { padding: 5px 8px; font-size: 0.85em; background-color: var(--button-danger-bg-color); color: var(--button-danger-text-color); border: none; border-radius: 4px; cursor: pointer; line-height: normal; }
+#info-flag-remove-button:hover:not(:disabled) { opacity: 0.9; }
+#info-flag-remove-button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 
 /* Nation List (within Info Panel) */
 #nationListContainer {
     width: 100%;
     overflow-y: auto; /* Enable vertical scroll */
     border: 1px solid var(--border-color);
-    background-color: var(--input-bg-color); /* Use input bg for contrast */
+    background-color: var(--input-bg-color);
     padding: 8px;
     border-radius: 5px;
     margin-top: 0;
@@ -485,344 +283,89 @@ body.dark-mode #status.error {
     min-height: 50px; /* Ensure it's visible even when empty */
     transition: background-color 0.3s, border-color 0.3s;
 }
-body.dark-mode #nationListContainer {
-    background-color: var(--input-bg-color);
-}
-#nationList {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-    color: var(--text-color);
-}
-#nationList li {
-    margin-bottom: 5px;
-    font-size: 0.9em;
-    padding: 4px 6px;
-    border-radius: 3px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s;
-    cursor: pointer;
-    user-select: none; /* Prevent text selection */
-}
-#nationList li:hover {
-    background-color: var(--button-hover-bg-color);
-}
-#nationList li.selected-list-item {
-    background-color: var(--link-color);
-    color: var(--button-primary-text-color); /* Use primary button text color */
-    font-weight: bold;
-}
-body.dark-mode #nationList li.selected-list-item {
-    color: var(--button-primary-text-color); /* Ensure contrast */
-}
-.nation-info {
-    flex-grow: 1; /* Allow text to take space */
-    /* Prevent clicks on text bubbling up differently if needed */
-    /* pointer-events: none; */
-    overflow: hidden; /* Hide overflow */
-    text-overflow: ellipsis; /* Show ... */
-    white-space: nowrap; /* Prevent wrapping */
-    padding-right: 10px; /* Space before delete button */
-}
-.delete-nation {
-    background: none;
-    border: none;
-    color: var(--highlight-color);
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0 5px;
-    font-size: 1.1em;
-    margin-left: 5px; /* Reduced margin */
-    flex-shrink: 0; /* Prevent button shrinking */
-    line-height: 1; /* Adjust vertical alignment */
-}
-.delete-nation:hover {
-    color: red;
-}
-body.dark-mode .delete-nation {
-    color: var(--highlight-color); /* Use variable */
-}
-body.dark-mode .delete-nation:hover {
-    color: #ffaaaa; /* Lighter red */
-}
+body.dark-mode #nationListContainer { background-color: var(--input-bg-color); }
+#nationList { list-style: none; padding-left: 0; margin: 0; color: var(--text-color); }
+#nationList li { margin-bottom: 5px; font-size: 0.9em; padding: 4px 6px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; cursor: pointer; user-select: none; }
+#nationList li:hover { background-color: var(--button-hover-bg-color); }
+#nationList li.selected-list-item { background-color: var(--link-color); color: var(--button-primary-text-color); font-weight: bold; }
+body.dark-mode #nationList li.selected-list-item { color: var(--button-primary-text-color); }
+.nation-info { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+.delete-nation { background: none; border: none; color: var(--highlight-color); font-weight: bold; cursor: pointer; padding: 0 5px; font-size: 1.1em; margin-left: 5px; flex-shrink: 0; line-height: 1; }
+.delete-nation:hover { color: red; }
+body.dark-mode .delete-nation { color: var(--highlight-color); }
+body.dark-mode .delete-nation:hover { color: #ffaaaa; }
 
-/* Inline Edit Panel */
-#inlineEditPanel {
-    display: none; /* Hidden by default */
-    position: absolute; /* Positioned relative to canvas-container */
-    background-color: var(--panel-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 15px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-    z-index: 100; /* Above canvas */
-    width: 220px; /* Fixed width */
-    box-sizing: border-box;
-}
-#inlineEditPanel label {
-    display: block;
-    margin-bottom: 3px;
-    font-size: 0.9em;
-    font-weight: bold;
-}
-#inlineEditPanel input {
-    width: 100%; /* Take full width minus padding */
-    margin-bottom: 10px;
-    padding: 5px;
-    border: 1px solid var(--input-border-color);
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 0.95em;
-}
-#inlineEditPanel div { /* Button container */
-    text-align: right; /* Align buttons right */
-    margin-top: 5px;
-}
-#inlineEditPanel button {
-    padding: 5px 10px;
-    margin-left: 5px; /* Space between buttons */
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    cursor: pointer;
-    font-size: 0.9em;
-}
-#inlineEditPanel button:hover {
-    background-color: var(--button-hover-bg-color);
-}
-#inlineEditSave {
-    background-color: var(--button-primary-bg-color);
-    color: var(--button-primary-text-color);
-    border-color: var(--button-primary-bg-color);
-}
-#inlineEditCancel {
-    background-color: var(--button-secondary-bg-color);
-    color: var(--button-secondary-text-color);
-    border-color: var(--button-secondary-bg-color);
-}
+/* Inline Edit Panel (Position relative to canvas-container) */
+#inlineEditPanel { display: none; position: absolute; background-color: var(--panel-bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; box-shadow: 0 3px 8px rgba(0,0,0,0.2); z-index: 100; width: 220px; box-sizing: border-box; }
+#inlineEditPanel label { display: block; margin-bottom: 3px; font-size: 0.9em; font-weight: bold; }
+#inlineEditPanel input { width: 100%; margin-bottom: 10px; padding: 5px; border: 1px solid var(--input-border-color); background-color: var(--input-bg-color); color: var(--text-color); border-radius: 4px; box-sizing: border-box; font-size: 0.95em; }
+#inlineEditPanel div { text-align: right; margin-top: 5px; }
+#inlineEditPanel button { padding: 5px 10px; margin-left: 5px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; font-size: 0.9em; }
+#inlineEditPanel button:hover { background-color: var(--button-hover-bg-color); }
+#inlineEditSave { background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); border-color: var(--button-primary-bg-color); }
+#inlineEditCancel { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
 
-/* Settings Panel */
-#settingsButton {
-    position: absolute; /* Relative to body */
-    top: 10px;
-    right: 10px;
-    padding: 8px 10px;
-    font-size: 1.2em; /* Make gear icon larger */
-    z-index: 1001; /* Above most elements except modal */
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    cursor: pointer;
-    line-height: 1; /* Ensure icon centers */
-}
-#settingsButton:hover {
-    background-color: var(--button-hover-bg-color);
-}
-#settingsPanel {
-    display: none; /* Hidden by default, shown by JS */
-    position: fixed; /* Fixed position relative to viewport */
-    top: 45px; /* Below settings button */
-    right: 10px;
-    width: 250px;
-    background-color: var(--panel-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    z-index: 1000; /* Below settings button, above other content */
-    color: var(--text-color);
-    transition: background-color 0.3s, border-color 0.3s;
-    box-sizing: border-box;
-}
-#settingsPanel h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
-}
-.setting-item {
-    margin-bottom: 15px;
-    /* Using flex for label/control alignment if needed */
-    /* display: flex; */
-    /* flex-direction: column; */
-    /* gap: 5px; */
-}
-.setting-item label:not(.toggle-switch) { /* Exclude toggle switch structural label */
-    display: block; /* Ensure label is above input */
-    font-weight: bold;
-    font-size: 0.9em;
-    margin-bottom: 5px; /* Space between label and control */
-}
-.setting-item input[type="range"] {
-    width: 100%; /* Make sliders take full width */
-    cursor: pointer;
-}
-.setting-item input[type="checkbox"] {
-    cursor: pointer;
-    margin-right: 5px; /* Space if label is inline */
-}
-/* Toggle Switch Styles */
-.toggle-switch {
-    position: relative;
-    display: inline-block; /* Or block if needed */
-    width: 40px;
-    height: 20px;
-    vertical-align: middle; /* Align with label text */
-}
-.toggle-switch input { /* Hide default checkbox */
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 20px; /* Rounded slider track */
-}
-.slider:before { /* The sliding knob */
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%; /* Circular knob */
-}
-input:checked + .slider {
-    background-color: var(--link-color); /* Use theme color when on */
-}
-input:focus + .slider { /* Add focus style */
-    box-shadow: 0 0 1px var(--link-color);
-}
-input:checked + .slider:before {
-    transform: translateX(20px); /* Move knob to the right */
-}
-/* Close Settings Button */
-#closeSettingsButton {
-    display: block; /* Full width */
-    margin-top: 10px;
-    padding: 8px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    cursor: pointer;
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 0.95em;
-}
-#closeSettingsButton:hover {
-    background-color: var(--button-hover-bg-color);
-}
+/* Settings Panel & Button */
+#settingsButton { position: fixed; /* Fixed relative to viewport */ top: 10px; right: 10px; padding: 8px 10px; font-size: 1.2em; z-index: 1001; background-color: var(--button-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; line-height: 1; }
+#settingsButton:hover { background-color: var(--button-hover-bg-color); }
+#settingsPanel { display: none; position: fixed; top: 50px; /* Position below button */ right: 10px; width: 250px; background-color: var(--panel-bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; color: var(--text-color); transition: background-color 0.3s, border-color 0.3s; box-sizing: border-box; }
+#settingsPanel h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+.setting-item { margin-bottom: 15px; }
+.setting-item label:not(.toggle-switch) { display: block; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
+.setting-item input[type="range"] { width: 100%; cursor: pointer; }
+.setting-item input[type="checkbox"] { cursor: pointer; margin-right: 5px; }
+.toggle-switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--link-color); }
+input:focus + .slider { box-shadow: 0 0 1px var(--link-color); }
+input:checked + .slider:before { transform: translateX(20px); }
+#closeSettingsButton { display: block; margin-top: 10px; padding: 8px; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; width: 100%; box-sizing: border-box; font-size: 0.95em; }
+#closeSettingsButton:hover { background-color: var(--button-hover-bg-color); }
 
 /* Modal Styles */
-#modal-overlay {
-    display: none; /* Hidden by default */
-    position: fixed; /* Cover viewport */
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    background-color: var(--modal-overlay-bg);
-    z-index: 2000; /* Above everything else */
-    justify-content: center;
-    align-items: center;
-    /* Add fade-in? */
-    /* opacity: 0; */
-    /* transition: opacity 0.2s ease-in-out; */
-}
-/* #modal-overlay.visible { opacity: 1; } */ /* Control visibility with display instead */
-
-#modal-dialog {
-    background-color: var(--modal-bg-color);
-    color: var(--modal-text-color);
-    padding: 25px;
-    border: 1px solid var(--modal-border-color);
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    min-width: 300px; /* Minimum width */
-    max-width: 90%; /* Max width relative to viewport */
-    width: 450px; /* Default width */
-    text-align: center;
-    box-sizing: border-box;
-    /* Add animation? */
-    /* transform: scale(0.9); */
-    /* transition: transform 0.2s ease-in-out; */
-}
-/* #modal-overlay.visible #modal-dialog { transform: scale(1); } */
-
-#modal-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--modal-text-color);
-}
-#modal-message {
-    margin-bottom: 20px;
-    font-size: 1em;
-    color: var(--modal-text-color);
-    white-space: pre-wrap; /* Respect newlines in the message string */
-    text-align: left; /* Align message text left for readability */
-    max-height: 40vh; /* Limit message height */
-    overflow-y: auto; /* Add scroll if message is too long */
-}
-#modal-input-container {
-    margin-bottom: 20px;
-}
-#modal-input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid var(--input-border-color);
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
-    border-radius: 4px;
-    font-size: 1em;
-    box-sizing: border-box;
-}
-#modal-buttons {
-    display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 10px;
-    margin-top: 10px; /* Space above buttons */
-}
-#modal-buttons button {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.95em;
-    cursor: pointer;
-    transition: background-color 0.2s, opacity 0.2s;
-    user-select: none;
-}
-#modal-ok, #modal-confirm {
-    background-color: var(--button-primary-bg-color);
-    color: var(--button-primary-text-color);
-}
-#modal-cancel, #modal-deny {
-    background-color: var(--button-secondary-bg-color);
-    color: var(--button-secondary-text-color);
-}
+#modal-overlay { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); z-index: 2000; justify-content: center; align-items: center; }
+#modal-dialog { background-color: var(--modal-bg-color); color: var(--modal-text-color); padding: 25px; border: 1px solid var(--modal-border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); min-width: 300px; max-width: 90%; width: 450px; text-align: center; box-sizing: border-box; }
+#modal-title { font-size: 1.3em; font-weight: bold; margin-top: 0; margin-bottom: 15px; color: var(--modal-text-color); }
+#modal-message { margin-bottom: 20px; font-size: 1em; color: var(--modal-text-color); white-space: pre-wrap; text-align: left; max-height: 40vh; overflow-y: auto; }
+#modal-input-container { margin-bottom: 20px; }
+#modal-input { width: 100%; padding: 8px; border: 1px solid var(--input-border-color); background-color: var(--input-bg-color); color: var(--text-color); border-radius: 4px; font-size: 1em; box-sizing: border-box; }
+#modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+#modal-buttons button { padding: 8px 15px; border: none; border-radius: 4px; font-size: 0.95em; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; user-select: none; }
+#modal-ok, #modal-confirm { background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); }
+#modal-cancel, #modal-deny { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); }
 #modal-ok:hover, #modal-confirm:hover { opacity: 0.9; }
 #modal-cancel:hover, #modal-deny:hover { opacity: 0.9; }
 
-/* Media Queries for Responsiveness (Optional) */
-@media (max-width: 768px) {
-    body { padding: 5px; }
-    h1 { font-size: 1.2em; }
-    #controls { padding: 6px 8px; gap: 6px; }
-    #controls button, .file-label-button { font-size: 0.85em; padding: 4px 8px; }
-    #editor-area { flex-direction: column; height: auto; } /* Stack panels vertically */
-    #instructions, #info-panel { flex-basis: auto; height: 200px; /* Fixed height when stacked */ }
-    #canvas-container { min-height: 300px; }
+/* Media Queries (Optional - Adjust Grid for smaller screens if needed) */
+@media (max-width: 800px) { /* Example breakpoint */
+    #main-container {
+        grid-template-columns: 1fr; /* Stack columns */
+        grid-template-rows: auto auto auto auto 1fr auto; /* Adjust rows */
+        grid-template-areas:
+            "title"
+            "controls"
+            "top-info"
+            "instr"
+            "canvas"
+            "info";
+        overflow-y: auto; /* Allow scrolling on small screens */
+        height: auto; /* Let content determine height */
+    }
+     body { height: auto; } /* Allow body to grow */
+
+    #instructions, #info-panel {
+        height: 250px; /* Give panels fixed height when stacked */
+        width: 100%; /* Full width */
+    }
+    #canvas-container {
+        min-height: 40vh; /* Ensure canvas has reasonable height */
+        width: 100%;
+    }
+     #settingsPanel {
+        width: 90%;
+        max-width: 300px;
+        right: 5%; /* Center it more */
+     }
 }

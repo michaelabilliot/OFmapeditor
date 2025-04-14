@@ -8,9 +8,9 @@ import { generateFlagName } from './nationUtils.js'; // Need this helper
 function getBase64FromDataUrl(dataUrl) {
     if (!dataUrl || !dataUrl.startsWith('data:')) return null;
     // Handles different media types and potential parameters (like ;base64)
-    const LOREM_IPSUM = dataUrl.indexOf(',');
-    if (LOREM_IPSUM === -1) return null;
-    return dataUrl.substring(LOREM_IPSUM + 1);
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex === -1) return null;
+    return dataUrl.substring(commaIndex + 1);
 }
 
 
@@ -56,6 +56,9 @@ export async function processAndAssignFlag(file, nation) {
         reader.onload = (e) => {
             try {
                 const originalFileData = e.target.result; // DataURL for raster, text for SVG
+                if (!originalFileData) {
+                     throw new Error("FileReader failed to read file data.");
+                }
 
                 // Store essential original data
                 nation.flag = flagName; // Assign the generated name (used for saving)
@@ -92,6 +95,7 @@ export async function processAndAssignFlag(file, nation) {
                     offscreenCanvas.height = resizedHeight;
                     const offscreenCtx = offscreenCanvas.getContext('2d');
                      if (!offscreenCtx) {
+                         // Fallback or error if context creation fails (very unlikely for standard canvas)
                          throw new Error("Could not get 2D context from offscreen canvas for resizing.");
                      }
 
@@ -129,8 +133,14 @@ export async function processAndAssignFlag(file, nation) {
                 if (isSvg) {
                     // For SVG, create a data URL from the text content
                     // Encode SVG data properly for use in src attribute
-                    const svgBase64 = btoa(unescape(encodeURIComponent(originalFileData)));
-                    originalFlagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
+                    // Use try-catch for btoa in case of invalid characters
+                    try {
+                        const svgBase64 = btoa(unescape(encodeURIComponent(originalFileData)));
+                        originalFlagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
+                    } catch(btoaError) {
+                         console.error(`Error encoding SVG for ${nation.name}:`, btoaError);
+                         reject(new Error(`Failed to encode SVG data for ${file.name}`));
+                    }
                 } else { // PNG, JPG, GIF, WEBP etc. (already read as DataURL)
                     originalFlagImage.src = originalFileData;
                 }
@@ -216,13 +226,14 @@ export async function loadFlagFiles(files) {
                     matchedNation = nationGeneratedNameMap.get(potentialMatchNameLower);
                      if (matchedNation.flag && matchedNation.flag.toLowerCase() !== potentialMatchNameLower) {
                          console.log(`Flag file '${file.name}' matches generated name for '${matchedNation.name}', but JSON specified '${matchedNation.flag}'. Using this file anyway.`);
-                         // Optional: Decide if you want to overwrite the JSON-specified name here
-                         // matchedNation.flag = potentialMatchNameLower; // Uncomment to update nation.flag
                      }
                 }
 
                 if (!matchedNation) {
-                    skippedNoMatchCount++;
+                    // Only count as skipped if it didn't match either map
+                    if (!nationFlagMap.has(potentialMatchNameLower) && !nationGeneratedNameMap.has(potentialMatchNameLower)) {
+                        skippedNoMatchCount++;
+                    }
                     return { status: 'skipped_nomatch', filename: file.name };
                 }
 
@@ -282,7 +293,8 @@ export async function loadFlagFiles(files) {
         for (const [flagName, nation] of nationFlagMap.entries()) {
             // Check if a flag was *expected* but not *successfully loaded* for this nation
             if (!nationsSuccessfullyLoaded.has(nation.name)) {
-                // Add only if it wasn't successfully loaded OR if flagImage is still null (e.g., zero dim load)
+                 // Add only if it wasn't successfully loaded OR if flagImage is still null (e.g., zero dim load)
+                 // This ensures we report missing even if load started but failed zero-dim check
                  if (!nation.flagImage) {
                      missingFromJson.push(nation.name);
                  }
@@ -327,11 +339,12 @@ export function promptAndLoadFlags() {
 
     // Define the change handler using an arrow function to maintain context
     const changeHandler = (event) => {
-        if (event.target.files.length > 0) {
+        if (event.target.files && event.target.files.length > 0) {
             loadFlagFiles(event.target.files);
         }
         // Clean up: remove the input and the listener
         document.body.removeChild(flagInput);
+        // No need to remove listener explicitly if element is removed
     };
 
     flagInput.addEventListener('change', changeHandler);
@@ -344,7 +357,7 @@ export function promptAndLoadFlags() {
 export async function handleJsonLoad(file) {
     if (!file) return;
     if (!cfg.mapImage) {
-        await showModal('alert', 'Error', 'Load map image BEFORE loading JSON.');
+        await showModal('alert', 'Error', 'Load map image BEFORE loading JSON data.');
         return;
     }
     if (!cfg.mapInfo || cfg.mapInfo.width === 0 || cfg.mapInfo.height === 0) {
@@ -470,8 +483,9 @@ export async function handleJsonLoad(file) {
 
         } catch (error) {
             console.error("Error loading/parsing/validating JSON:", error);
-            await showModal('alert', 'JSON Load Error', `Failed to load JSON: ${error.message}`);
-            updateStatus(`Error loading JSON: ${error.message}`, true);
+            const errorMsg = error instanceof Error ? error.message : "Unknown error parsing JSON.";
+            await showModal('alert', 'JSON Load Error', `Failed to load JSON: ${errorMsg}`);
+            updateStatus(`Error loading JSON: ${errorMsg}`, true);
             // Optionally reset state here if load fails partially? Current logic keeps old state.
         }
     };
@@ -563,7 +577,7 @@ export async function saveProjectAsZip() {
         const mapImageBase64 = getBase64FromDataUrl(cfg.mapImage.src);
         if (mapImageBase64) {
              // Determine extension from original map file type or default to png
-             const extension = cfg.mapInfo.fileType.startsWith('image/')
+             const extension = cfg.mapInfo.fileType?.startsWith('image/')
                 ? (cfg.mapInfo.fileType.split('/')[1] || 'png')
                 : 'png';
             projectFolder.file(`${safeProjectName}.${extension}`, mapImageBase64, { base64: true });
@@ -656,8 +670,9 @@ export async function saveProjectAsZip() {
 
     } catch (error) {
         console.error("Error creating ZIP file:", error);
-        await showModal('alert', 'ZIP Error', `Error creating ZIP file: ${error.message}`);
-        updateStatus(`Error creating ZIP: ${error.message}`, true);
+        const errorMsg = error instanceof Error ? error.message : "Unknown error creating ZIP.";
+        await showModal('alert', 'ZIP Error', `Error creating ZIP file: ${errorMsg}`);
+        updateStatus(`Error creating ZIP: ${errorMsg}`, true);
     }
 }
 // --- END OF FILE js/dataUtils.js ---

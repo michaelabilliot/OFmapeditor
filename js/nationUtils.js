@@ -64,7 +64,6 @@ export async function handleAddNation(mapPos) {
 
         const parsedStrength = parseInt(strengthInput, 10);
         // Validate: Must be an integer, and the input string must strictly match the parsed number
-        // This prevents inputs like "1.5" or "1e3" which parseInt might partially parse.
         if (!isNaN(parsedStrength) && Number.isInteger(parsedStrength) && String(parsedStrength) === strengthInput.trim()) {
             strength = parsedStrength; // Valid strength obtained
         } else {
@@ -152,7 +151,6 @@ export async function handleDeleteNation(event) {
         } else if (oldSelectedIndex !== null && oldSelectedIndex > indexToDelete) {
             // Adjust selection index if it was after the deleted one
             cfg.setSelectedNationIndex(oldSelectedIndex - 1);
-            // updateInfoPanel based on the *new* selected index (will be done below)
         }
 
         // --- Update UI ---
@@ -222,9 +220,6 @@ export async function saveInlineEdit() {
     nation.strength = newStrength;
 
     // --- Handle Flag Name Update (if name changed and flag exists) ---
-    // If the name changed, we should update the base 'flag' name property that's used
-    // for matching files during load and for saving the flag file.
-    // We keep the existing flagImage, flagData etc. - only the base name reference changes.
     if (nameChanged && nation.flag) { // Only update if a flag name was already associated
         const oldFlagName = nation.flag;
         const newFlagName = generateFlagName(newName); // Generate new base name
@@ -246,8 +241,7 @@ export async function saveInlineEdit() {
     closeInlineEditor(); // Close panel on successful save
     updateNationList(); // Update list display (name/strength)
     redrawCanvas(); // Redraw map (marker shape might change due to strength, text updates)
-    // No need to call updateInfoPanel again if name change didn't affect flag,
-    // as it would have been updated already if selected. But calling it ensures consistency.
+    // Update info panel based on potentially changed selection or flag name
     if (cfg.selectedNationIndex === editIndex) {
         updateInfoPanel(editIndex);
     }

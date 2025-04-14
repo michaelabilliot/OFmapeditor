@@ -23,7 +23,6 @@ async function colorizeLoadedMap(sourceImage, imageType) {
         const height = sourceImage.naturalHeight;
 
         // --- Use a standard HTMLCanvasElement ---
-        // Removed the OffscreenCanvas check for better compatibility
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -41,7 +40,6 @@ async function colorizeLoadedMap(sourceImage, imageType) {
             ctx.drawImage(sourceImage, 0, 0);
 
             // Get pixel data
-            // Use try-catch around getImageData as it can fail in some edge cases (e.g., tainted canvas, though unlikely here)
             let imageData;
             try {
                  imageData = ctx.getImageData(0, 0, width, height);
