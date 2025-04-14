@@ -1,10 +1,10 @@
 // --- START OF FILE js/map-generator/modules/noiseUtils.js ---
 // --- Noise Utility Wrapper ---
 
-// Import the SPECIFIC function(s) needed, as the module uses named exports (CommonJS style)
-import { createNoise2D } from '../lib/simplex-noise.js'; // <<<--- CORRECTED IMPORT SYNTAX
+// Import the default export (which is the openSimplexNoise function)
+import openSimplexNoise from '../lib/simplex-noise.js';
 
-let noise2D; // Store the function itself
+let noiseAPI; // Changed variable name for clarity - holds the RETURNED API object
 let seed = 'default seed';
 
 /**
@@ -15,19 +15,20 @@ export function init(initialSeed) {
     seed = initialSeed || 'default seed';
     console.log("[noiseUtils] Attempting to initialize SimplexNoise...");
     try {
-        // The imported createNoise2D is a factory function that takes a random generator
-        if (typeof createNoise2D !== 'function') {
-             throw new Error("Imported createNoise2D is not a function.");
+        // Call the imported factory function and store the returned API object
+        noiseAPI = openSimplexNoise(seed);
+
+        // Verify that the returned object has the necessary function
+        if (!noiseAPI || typeof noiseAPI.noise2D !== 'function') {
+             throw new Error("Initialization failed: openSimplexNoise did not return an object with a noise2D function.");
         }
-        // Create the actual noise function using the factory
-        // We can use the default Math.random or provide our own seeded random if needed
-        noise2D = createNoise2D(Math.random); // Or use a seeded random function based on 'seed' if desired
-        console.log(`[noiseUtils] Noise generator initialized successfully using createNoise2D factory.`);
+
+        console.log(`[noiseUtils] Noise generator initialized successfully with seed: "${seed}"`);
 
     } catch (e) {
          console.error("[noiseUtils] Failed to initialize SimplexNoise:", e);
-         console.error("[noiseUtils] Ensure 'js/map-generator/lib/simplex-noise.js' exists and is valid JS.");
-         noise2D = null; // Ensure noise2D is null if init fails
+         console.error("[noiseUtils] Ensure 'js/map-generator/lib/simplex-noise.js' exists, is valid JS, and has 'export default openSimplexNoise;' at the end.");
+         noiseAPI = null; // Ensure noiseAPI is null if init fails
     }
 }
 
@@ -38,15 +39,15 @@ export function init(initialSeed) {
  * @returns {number} Noise value between -1 and 1.
  */
 export function getNoise2D(x, y) {
-    if (!noise2D) {
-        // console.warn("[noiseUtils] Noise function not initialized. Returning 0.");
+    if (!noiseAPI) {
+        // console.warn("[noiseUtils] Noise generator not initialized. Returning 0.");
         return 0;
     }
     try {
-        // Call the noise function that was created by the factory during init()
-        return noise2D(x, y);
+        // Use the stored API object
+        return noiseAPI.noise2D(x, y);
     } catch (e) {
-        console.error("[noiseUtils] Error calling noise2D function:", e);
+        console.error("[noiseUtils] Error calling noise2D:", e);
         return 0;
     }
 }
@@ -69,7 +70,7 @@ export function getFBM(x, y, octaves, persistence, lacunarity, initialFrequency)
     let maxValue = 0; // Used for normalization
 
     for (let i = 0; i < octaves; i++) {
-        total += getNoise2D(x * frequency, y * frequency) * amplitude; // Uses the initialized noise2D function
+        total += getNoise2D(x * frequency, y * frequency) * amplitude;
         maxValue += amplitude;
         amplitude *= persistence;
         frequency *= lacunarity;
@@ -79,5 +80,4 @@ export function getFBM(x, y, octaves, persistence, lacunarity, initialFrequency)
     return maxValue === 0 ? 0 : total / maxValue;
 }
 
-// --- Add other noise functions if needed (e.g., 3D, ridge noise) ---
 // --- END OF FILE js/map-generator/modules/noiseUtils.js ---

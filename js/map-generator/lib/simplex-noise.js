@@ -1,473 +1,245 @@
-"use strict";
-/*
- * A fast javascript implementation of simplex noise by Jonas Wagner
+function openSimplexNoise(clientSeed) {
+	"use strict";
+	const SQ5 = 2.23606797749979;
+	const SQ4 = 2;
+	const SQ3 = 1.7320508075688772;
+	const toNums = (s) => s.split(",").map(s => new Uint8Array(s.split("").map(v => Number(v))));
+	const decode = (m, r, s) => new Int8Array(s.split("").map(v => parseInt(v, r) + m));
+	const toNumsB32 = (s) => s.split(",").map(s => parseInt(s, 32));
+	const NORM_2D = 1.0 / 47.0;
+	const NORM_3D = 1.0 / 103.0;
+	const NORM_4D = 1.0 / 30.0;
+	const SQUISH_2D = (SQ3 - 1) / 2;
+	const SQUISH_3D = (SQ4 - 1) / 3;
+	const SQUISH_4D = (SQ5 - 1) / 4;
+	const STRETCH_2D = (1 / SQ3 - 1) / 2;
+	const STRETCH_3D = (1 / SQ4 - 1) / 3;
+	const STRETCH_4D = (1 / SQ5 - 1) / 4;
+	var base2D = toNums("110101000,110101211");
+	var base3D = toNums("0000110010101001,2110210120113111,110010101001211021012011");
+	var base4D = toNums("0000011000101001001010001,3111031101310113011141111,11000101001001010001211002101021001201102010120011,31110311013101130111211002101021001201102010120011");
+	const gradients2D = decode(-5, 11, "a77a073aa3700330");
+	const gradients3D = decode(-11, 23, "0ff7mf7fmmfffmfffm07f70f77mm7ff0ff7m0f77m77f0mf7fm7ff0077707770m77f07f70");
+	const gradients4D = decode(-3, 7, "6444464444644446044426442464244662444044426442460244204422642246642446244404442604242624240424266224402442044226022420242204222664424642446244400442264224622440624240424262424002422042226222406422462244024420042226222402242062224022420242200222202222022220");
+	var lookupPairs2D = () => new Uint8Array([0,1, 1,0, 4,1, 17,0, 20,2, 21,2, 22,5, 23, 5,26, 4,39, 3,42, 4,43, 3]);
+	var lookupPairs3D = () => new Uint16Array(toNumsB32("0,2,1,1,2,2,5,1,6,0,7,0,10,2,12,2,41,1,45,1,50,5,51,5,g6,0,g7,0,h2,4,h6,4,k5,3,k7,3,l0,5,l1,5,l2,4,l5,3,l6,4,l7,3,l8,d,l9,d,la,c,ld,e,le,c,lf,e,m8,k,ma,i,p9,l,pd,n,q8,k,q9,l,15e,j,15f,m,16a,i,16e,j,19d,n,19f,m,1a8,f,1a9,h,1aa,f,1ad,h,1ae,g,1af,g,1ag,b,1ah,a,1ai,b,1al,a,1am,9,1an,9,1bg,b,1bi,b,1eh,a,1el,a,1fg,8,1fh,8,1qm,9,1qn,9,1ri,7,1rm,7,1ul,6,1un,6,1vg,8,1vh,8,1vi,7,1vl,6,1vm,7,1vn,6"));
+	var lookupPairs4D = () => new Uint32Array(toNumsB32("0,3,1,2,2,3,5,2,6,1,7,1,8,3,9,2,a,3,d,2,g,3,i,3,m,1,n,1,o,3,q,3,11,2,15,2,16,1,17,1,19,2,1d,2,1m,1,1n,1,1o,0,1p,0,1q,0,1r,0,1s,0,1t,0,1u,0,1v,0,80,3,82,3,88,3,8a,3,8g,3,8i,3,8o,3,8q,3,201,2,205,2,209,2,20d,2,211,2,215,2,219,2,21d,2,280,9,281,9,288,9,289,9,g06,1,g07,1,g0m,1,g0n,1,g16,1,g17,1,g1m,1,g1n,1,g82,8,g86,8,g8i,8,g8m,8,i05,6,i07,6,i15,6,i17,6,i80,9,i81,9,i82,8,i85,6,i86,8,i87,6,i88,9,i89,9,i8i,8,i8m,8,i95,6,i97,6,401o,0,401p,0,401q,0,401r,0,401s,0,401t,0,401u,0,401v,0,408o,7,408q,7,409o,7,409q,7,4219,5,421d,5,421p,5,421t,5,4280,9,4281,9,4288,9,4289,9,428o,7,428q,7,4299,5,429d,5,429o,7,429p,5,429q,7,429t,5,4g1m,4,4g1n,4,4g1u,4,4g1v,4,4g82,8,4g86,8,4g8i,8,4g8m,8,4g8o,7,4g8q,7,4g9m,4,4g9n,4,4g9o,7,4g9q,7,4g9u,4,4g9v,4,4i05,6,4i07,6,4i15,6,4i17,6,4i19,5,4i1d,5,4i1m,4,4i1n,4,4i1p,5,4i1t,5,4i1u,4,4i1v,4,4i80,9,4i81,9,4i82,8,4i85,6,4i86,8,4i87,6,4i88,9,4i89,9,4i8i,8,4i8m,8,4i8o,7,4i8q,7,4i95,6,4i97,6,4i99,5,4i9d,5,4i9m,4,4i9n,4,4i9o,7,4i9p,5,4i9q,7,4i9t,5,4i9u,4,4i9v,4,4ia0,15,4ia1,15,4ia2,14,4ia5,12,4ia6,14,4ia7,12,4ia8,15,4ia9,15,4iai,14,4iam,14,4iao,13,4iaq,13,4ib5,12,4ib7,12,4ib9,11,4ibd,11,4ibm,10,4ibn,10,4ibo,13,4ibp,11,4ibq,13,4ibt,11,4ibu,10,4ibv,10,4ii0,1h,4ii2,1g,4ii8,1h,4iii,1g,4iio,1f,4iiq,1f,4ka1,1e,4ka5,1d,4ka9,1e,4kb5,1d,4kb9,1c,4kbd,1c,4ki0,1h,4ki1,1e,4ki8,1h,4ki9,1e,52a6,1b,52a7,1a,52am,1b,52b7,1a,52bm,19,52bn,19,52i2,1g,52i6,1b,52ii,1g,52im,1b,54a5,1d,54a7,1a,54b5,1d,54b7,1a,54i0,v,54i1,s,54i2,v,54i5,s,54i6,p,54i7,p,8ibo,18,8ibp,17,8ibq,18,8ibt,17,8ibu,16,8ibv,16,8iio,1f,8iiq,1f,8ijo,18,8ijq,18,8kb9,1c,8kbd,1c,8kbp,17,8kbt,17,8ki8,u,8ki9,r,8kio,u,8kj9,r,8kjo,m,8kjp,m,92bm,19,92bn,19,92bu,16,92bv,16,92ii,t,92im,o,92iq,t,92jm,o,92jq,l,92ju,l,94b5,q,94b7,n,94bd,q,94bn,n,94bt,k,94bv,k,94i0,v,94i1,s,94i2,v,94i5,s,94i6,p,94i7,p,94i8,u,94i9,r,94ii,t,94im,o,94io,u,94iq,t,94j5,q,94j7,n,94j9,r,94jd,q,94jm,o,94jn,n,94jo,m,94jp,m,94jq,l,94jt,k,94ju,l,94jv,k,94k0,1t,94k1,1s,94k2,1t,94k5,1s,94k6,1r,94k7,1r,94k8,1q,94k9,1p,94ki,1n,94km,1m,94ko,1q,94kq,1n,94l5,1k,94l7,1j,94l9,1p,94ld,1k,94lm,1m,94ln,1j,94lo,1o,94lp,1o,94lq,1l,94lt,1i,94lu,1l,94lv,1i,94s0,1t,94s2,1t,94s8,1q,94si,1n,94so,1q,94sq,1n,96k1,1s,96k5,1s,96k9,1p,96l5,1k,96l9,1p,96ld,1k,96s0,2f,96s1,2f,96s8,2c,96s9,2c,9kk6,1r,9kk7,1r,9kkm,1m,9kl7,1j,9klm,1m,9kln,1j,9ks2,2e,9ks6,2e,9ksi,29,9ksm,29,9mk5,2d,9mk7,2d,9ml5,26,9ml7,26,9ms0,2f,9ms1,2f,9ms2,2e,9ms5,2d,9ms6,2e,9ms7,2d,d4lo,1o,d4lp,1o,d4lq,1l,d4lt,1i,d4lu,1l,d4lv,1i,d4so,2b,d4sq,28,d4to,2b,d4tq,28,d6l9,2a,d6ld,25,d6lp,2a,d6lt,25,d6s8,2c,d6s9,2c,d6so,2b,d6t9,2a,d6to,2b,d6tp,2a,dklm,27,dkln,24,dklu,27,dklv,24,dksi,29,dksm,29,dksq,28,dktm,27,dktq,28,dktu,27,dml5,26,dml7,26,dmld,25,dmln,24,dmlt,25,dmlv,24,dms0,23,dms1,23,dms2,22,dms5,20,dms6,22,dms7,20,dms8,23,dms9,23,dmsi,22,dmsm,22,dmso,21,dmsq,21,dmt5,20,dmt7,20,dmt9,1v,dmtd,1v,dmtm,1u,dmtn,1u,dmto,21,dmtp,1v,dmtq,21,dmtt,1v,dmtu,1u,dmtv,1u,dmu0,j,dmu1,j,dmu2,i,dmu5,g,dmu6,i,dmu7,g,dmu8,j,dmu9,j,dmui,i,dmum,i,dmuo,h,dmuq,h,dmv5,g,dmv7,g,dmv9,f,dmvd,f,dmvm,e,dmvn,e,dmvo,h,dmvp,f,dmvq,h,dmvt,f,dmvu,e,dmvv,e,dn60,j,dn61,j,dn62,i,dn66,i,dn68,j,dn69,j,dn6i,i,dn6m,i,dn6o,h,dn6q,h,dn7o,h,dn7q,h,dou0,j,dou1,j,dou5,g,dou7,g,dou8,j,dou9,j,dov5,g,dov7,g,dov9,f,dovd,f,dovp,f,dovt,f,dp60,j,dp61,j,dp68,j,dp69,j,e6u2,i,e6u5,g,e6u6,i,e6u7,g,e6ui,i,e6um,i,e6v5,g,e6v7,g,e6vm,e,e6vn,e,e6vu,e,e6vv,e,e762,i,e766,i,e76i,i,e76m,i,e8u5,g,e8u7,g,e8v5,g,e8v7,g,e960,d,e961,d,e962,d,e963,d,e964,d,e965,d,e966,d,e967,d,hmuo,h,hmuq,h,hmv9,f,hmvd,f,hmvm,e,hmvn,e,hmvo,h,hmvp,f,hmvq,h,hmvt,f,hmvu,e,hmvv,e,hn6o,h,hn6q,h,hn7o,h,hn7q,h,hov9,f,hovd,f,hovp,f,hovt,f,hp68,c,hp69,c,hp6o,c,hp6p,c,hp78,c,hp79,c,hp7o,c,hp7p,c,i6vm,e,i6vn,e,i6vu,e,i6vv,e,i76i,b,i76m,b,i76q,b,i76u,b,i77i,b,i77m,b,i77q,b,i77u,b,i8v5,a,i8v7,a,i8vd,a,i8vf,a,i8vl,a,i8vn,a,i8vt,a,i8vv,a,i960,d,i961,d,i962,d,i963,d,i964,d,i965,d,i966,d,i967,d,i968,c,i969,c,i96i,b,i96m,b,i96o,c,i96p,c,i96q,b,i96u,b,i975,a,i977,a,i978,c,i979,c,i97d,a,i97f,a,i97i,b,i97l,a,i97m,b,i97n,a,i97o,c,i97p,c,i97q,b,i97t,a,i97u,b,i97v,a"));
+	var p2D = decode(-1, 4, "112011021322233123132111");
+	var p3D = decode(-1, 5, "112011210110211120110121102132212220132122202131222022243214231243124213241324123222113311221213131221123113311112202311112022311112220342223113342223311342223131322023113322023311320223113320223131322203311322203131");
+	var p4D = decode(-1, 6, "11201112101121101102111120111210110121110211112011011211012111021322112220122210132121220212212013122120221212201321122201222102131212202122120213112220122210222532215232152231253212523125221325312252132521232513225123251223232211432114231123212143121421312312214132141231232112431124211323121241312412132311224113241123342221322203311134221232202331113421223202233111342221322203131134221232202313113412223022231311342221322203113134212232022311313412223022231131342212322023111334212232022311133412223022231113322201222101111132202122120111113202212122011111322012221021111132021221202111113201222102211111322201222103311132202122120331113220122210233111322201222103131132022121220313113202122120231311322021221203113132022121220311313201222102231131322012221023111332021221202311133201222102231113422111331113222042121131311322204211213113132220422111331113220242121131311322024211123111332202422111331113202242112131131320224211123111332022421211313113022242112131131302224211123111330222443211423115222244312142131522224413214123152222443112421135222244131241213522224411324112352222443211423113222044312142131322204413214123132220443211423113220244311242113322024413124121332202443121421313202244311242113320224411324112332022441321412313022244131241213302224411324112330222");
 
-Based on a speed-improved simplex noise algorithm for 2D, 3D and 4D in Java.
-Which is based on example code by Stefan Gustavson (stegu@itn.liu.se).
-With Optimisations by Peter Eastman (peastman@drizzle.stanford.edu).
-Better rank ordering method by Stefan Gustavson in 2012.
+	const setOf = (count, cb = (i)=>i) => { var a = [],i = 0; while (i < count) { a.push(cb(i ++)) } return a };
+	const doFor = (count, cb) => { var i = 0; while (i < count && cb(i++) !== true); };
 
- Copyright (c) 2024 Jonas Wagner
+	function shuffleSeed(seed,count = 1){
+		seed = seed * 1664525 + 1013904223 | 0;
+		count -= 1;
+		return count > 0 ? shuffleSeed(seed, count) : seed;
+	}
+	const types = {
+		_2D : {
+			base : base2D,
+			squish : SQUISH_2D,
+			dimensions : 2,
+			pD : p2D,
+			lookup : lookupPairs2D,
+		},
+		_3D : {
+			base : base3D,
+			squish : SQUISH_3D,
+			dimensions : 3,
+			pD : p3D,
+			lookup : lookupPairs3D,
+		},
+		_4D : {
+			base : base4D,
+			squish : SQUISH_4D,
+			dimensions : 4,
+			pD : p4D,
+			lookup : lookupPairs4D,
+		},
+	};
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+	function createContribution(type, baseSet, index) {
+		var i = 0;
+		const multiplier = baseSet[index ++];
+		const c = { next : undefined };
+		while(i < type.dimensions){
+			const axis = ("xyzw")[i];
+			c[axis + "sb"] = baseSet[index + i];
+			c["d" + axis] = - baseSet[index + i++] - multiplier * type.squish;
+		}
+		return c;
+	}
 
- The above copyright notice and this permission notice shall be included in all
- copies or substantial portions of the Software.
+	function createLookupPairs(lookupArray, contributions){
+		var i;
+		const a = lookupArray();
+		const res = new Map();
+		for (i = 0; i < a.length; i += 2) { res.set(a[i], contributions[a[i + 1]]) }
+		return res;
+	}
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- SOFTWARE.
- */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildPermutationTable = exports.createNoise4D = exports.createNoise3D = exports.createNoise2D = void 0;
-// these __PURE__ comments help uglifyjs with dead code removal
-//
-const SQRT3 = /*#__PURE__*/ Math.sqrt(3.0);
-const SQRT5 = /*#__PURE__*/ Math.sqrt(5.0);
-const F2 = 0.5 * (SQRT3 - 1.0);
-const G2 = (3.0 - SQRT3) / 6.0;
-const F3 = 1.0 / 3.0;
-const G3 = 1.0 / 6.0;
-const F4 = (SQRT5 - 1.0) / 4.0;
-const G4 = (5.0 - SQRT5) / 20.0;
-// I'm really not sure why this | 0 (basically a coercion to int)
-// is making this faster but I get ~5 million ops/sec more on the
-// benchmarks across the board or a ~10% speedup.
-const fastFloor = (x) => Math.floor(x) | 0;
-const grad2 = /*#__PURE__*/ new Float64Array([1, 1,
-    -1, 1,
-    1, -1,
-    -1, -1,
-    1, 0,
-    -1, 0,
-    1, 0,
-    -1, 0,
-    0, 1,
-    0, -1,
-    0, 1,
-    0, -1]);
-// double seems to be faster than single or int's
-// probably because most operations are in double precision
-const grad3 = /*#__PURE__*/ new Float64Array([1, 1, 0,
-    -1, 1, 0,
-    1, -1, 0,
-    -1, -1, 0,
-    1, 0, 1,
-    -1, 0, 1,
-    1, 0, -1,
-    -1, 0, -1,
-    0, 1, 1,
-    0, -1, 1,
-    0, 1, -1,
-    0, -1, -1]);
-// double is a bit quicker here as well
-const grad4 = /*#__PURE__*/ new Float64Array([0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
-    0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
-    1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
-    -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
-    1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
-    -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
-    1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
-    -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0]);
-/**
- * Creates a 2D noise function
- * @param random the random function that will be used to build the permutation table
- * @returns {NoiseFunction2D}
- */
-function createNoise2D(random = Math.random) {
-    const perm = buildPermutationTable(random);
-    // precalculating this yields a little ~3% performance improvement.
-    const permGrad2x = new Float64Array(perm).map(v => grad2[(v % 12) * 2]);
-    const permGrad2y = new Float64Array(perm).map(v => grad2[(v % 12) * 2 + 1]);
-    return function noise2D(x, y) {
-        // if(!isFinite(x) || !isFinite(y)) return 0;
-        let n0 = 0; // Noise contributions from the three corners
-        let n1 = 0;
-        let n2 = 0;
-        // Skew the input space to determine which simplex cell we're in
-        const s = (x + y) * F2; // Hairy factor for 2D
-        const i = fastFloor(x + s);
-        const j = fastFloor(y + s);
-        const t = (i + j) * G2;
-        const X0 = i - t; // Unskew the cell origin back to (x,y) space
-        const Y0 = j - t;
-        const x0 = x - X0; // The x,y distances from the cell origin
-        const y0 = y - Y0;
-        // For the 2D case, the simplex shape is an equilateral triangle.
-        // Determine which simplex we are in.
-        let i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
-        if (x0 > y0) {
-            i1 = 1;
-            j1 = 0;
-        } // lower triangle, XY order: (0,0)->(1,0)->(1,1)
-        else {
-            i1 = 0;
-            j1 = 1;
-        } // upper triangle, YX order: (0,0)->(0,1)->(1,1)
-        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
-        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
-        // c = (3-sqrt(3))/6
-        const x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
-        const y1 = y0 - j1 + G2;
-        const x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner in (x,y) unskewed coords
-        const y2 = y0 - 1.0 + 2.0 * G2;
-        // Work out the hashed gradient indices of the three simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        // Calculate the contribution from the three corners
-        let t0 = 0.5 - x0 * x0 - y0 * y0;
-        if (t0 >= 0) {
-            const gi0 = ii + perm[jj];
-            const g0x = permGrad2x[gi0];
-            const g0y = permGrad2y[gi0];
-            t0 *= t0;
-            // n0 = t0 * t0 * (grad2[gi0] * x0 + grad2[gi0 + 1] * y0); // (x,y) of grad3 used for 2D gradient
-            n0 = t0 * t0 * (g0x * x0 + g0y * y0);
-        }
-        let t1 = 0.5 - x1 * x1 - y1 * y1;
-        if (t1 >= 0) {
-            const gi1 = ii + i1 + perm[jj + j1];
-            const g1x = permGrad2x[gi1];
-            const g1y = permGrad2y[gi1];
-            t1 *= t1;
-            // n1 = t1 * t1 * (grad2[gi1] * x1 + grad2[gi1 + 1] * y1);
-            n1 = t1 * t1 * (g1x * x1 + g1y * y1);
-        }
-        let t2 = 0.5 - x2 * x2 - y2 * y2;
-        if (t2 >= 0) {
-            const gi2 = ii + 1 + perm[jj + 1];
-            const g2x = permGrad2x[gi2];
-            const g2y = permGrad2y[gi2];
-            t2 *= t2;
-            // n2 = t2 * t2 * (grad2[gi2] * x2 + grad2[gi2 + 1] * y2);
-            n2 = t2 * t2 * (g2x * x2 + g2y * y2);
-        }
-        // Add contributions from each corner to get the final noise value.
-        // The result is scaled to return values in the interval [-1,1].
-        return 70.0 * (n0 + n1 + n2);
-    };
+	function createContributionArray(type) {
+		const conts = [];
+		const d = type.dimensions;
+		const baseStep = d * d;
+		var k, i = 0;
+		while (i < type.pD.length) {
+			const baseSet = type.base[type.pD[i]];
+			let previous, current;
+			k = 0;
+			do {
+				current = createContribution(type, baseSet, k);
+				if (!previous) { conts[i / baseStep] = current }
+				else { previous.next = current }
+				previous = current;
+				k += d + 1;
+			} while(k < baseSet.length);
+
+			current.next = createContribution(type, type.pD, i + 1);
+			if (d >= 3) { current.next.next = createContribution(type, type.pD, i + d + 2) }
+			if (d === 4) { current.next.next.next = createContribution(type, type.pD, i + 11) }
+			i += baseStep;
+		}
+		const result = [conts, createLookupPairs(type.lookup, conts)];
+		type.base = undefined;
+		type.lookup = undefined;
+		return result;
+	}
+
+	const [contributions2D, lookup2D] = createContributionArray(types._2D);
+	const [contributions3D, lookup3D] = createContributionArray(types._3D);
+	const [contributions4D, lookup4D] = createContributionArray(types._4D);
+	const perm = new Uint8Array(256);
+	const perm2D = new Uint8Array(256);
+	const perm3D = new Uint8Array(256);
+	const perm4D = new Uint8Array(256);
+	const source = new Uint8Array(setOf(256, i => i));
+	var seed = shuffleSeed(clientSeed, 3);
+	doFor(256, i => {
+		i = 255 - i;
+		seed = shuffleSeed(seed);
+		var r = (seed + 31) % (i + 1);
+		r += r < 0 ? i + 1 : 0;
+		perm[i] = source[r];
+		perm2D[i] = perm[i] & 0x0E;
+		perm3D[i] = (perm[i] % 24) * 3;
+		perm4D[i] = perm[i] & 0xFC;
+		source[r] = source[i];
+	});
+	base2D = base3D = base4D = undefined;
+	lookupPairs2D = lookupPairs3D = lookupPairs4D = undefined;
+	p2D = p3D = p4D = undefined;
+
+	const API = {
+		noise2D(x, y) {
+			const pD = perm2D;
+			const p = perm;
+			const g = gradients2D;
+			const stretchOffset = (x + y) * STRETCH_2D;
+			const xs = x + stretchOffset, ys = y + stretchOffset;
+			const xsb = Math.floor(xs), ysb = Math.floor(ys);
+			const squishOffset	= (xsb + ysb) * SQUISH_2D;
+			const dx0 = x - (xsb + squishOffset), dy0 = y - (ysb + squishOffset);
+			var c = (() => {
+				const xins = xs - xsb, yins = ys - ysb;
+				const inSum = xins + yins;
+				return lookup2D.get(
+					(xins - yins + 1) |
+					(inSum << 1) |
+					((inSum + yins) << 2) |
+					((inSum + xins) << 4)
+				);
+			})();
+			var i, value = 0;
+			while (c !== undefined) {
+				const dx = dx0 + c.dx;
+				const dy = dy0 + c.dy;
+				let attn = 2 - dx * dx - dy * dy;
+				if (attn > 0) {
+					i = pD[(p[(xsb + c.xsb) & 0xFF] + (ysb + c.ysb)) & 0xFF];
+					attn *= attn;
+					value += attn * attn * (g[i++] * dx + g[i] * dy);
+				}
+				c = c.next;
+			}
+			return value * NORM_2D;
+		},
+		noise3D(x, y, z) {
+			const pD = perm3D;
+			const p = perm;
+			const g = gradients3D;
+			const stretchOffset = (x + y + z) * STRETCH_3D;
+			const xs = x + stretchOffset, ys = y + stretchOffset, zs = z + stretchOffset;
+			const xsb = Math.floor(xs), ysb = Math.floor(ys), zsb = Math.floor(zs);
+			const squishOffset	= (xsb + ysb + zsb) * SQUISH_3D;
+			const dx0 = x - (xsb + squishOffset), dy0 = y - (ysb + squishOffset), dz0 = z - (zsb + squishOffset);
+			var c = (() => {
+				const xins = xs - xsb, yins = ys - ysb, zins = zs - zsb;
+				const inSum = xins + yins + zins;
+				return lookup3D.get(
+					(yins - zins + 1) |
+					((xins - yins + 1) << 1) |
+					((xins - zins + 1) << 2) |
+					(inSum << 3) |
+					((inSum + zins) << 5) |
+					((inSum + yins) << 7) |
+					((inSum + xins) << 9)
+				);
+			})();
+			var i, value = 0;
+			while (c !== undefined) {
+				const dx = dx0 + c.dx, dy = dy0 + c.dy, dz = dz0 + c.dz;
+				let attn = 2 - dx * dx - dy * dy - dz * dz;
+				if (attn > 0) {
+					i = pD[(((p[(xsb + c.xsb) & 0xFF] + (ysb + c.ysb)) & 0xFF) + (zsb + c.zsb)) & 0xFF];
+					attn *= attn;
+					value += attn * attn * (g[i++] * dx + g[i++] * dy + g[i] * dz);
+				}
+				c = c.next;
+			}
+			return value * NORM_3D;
+		},
+		noise4D(x, y, z, w) {
+			const pD = perm4D;
+			const p = perm;
+			const g = gradients4D;
+			const stretchOffset = (x + y + z + w) * STRETCH_4D;
+			const xs = x + stretchOffset, ys = y + stretchOffset, zs = z + stretchOffset, ws = w + stretchOffset;
+			const xsb = Math.floor(xs), ysb = Math.floor(ys), zsb = Math.floor(zs), wsb = Math.floor(ws);
+			const squishOffset	= (xsb + ysb + zsb + wsb) * SQUISH_4D;
+			const dx0 = x - (xsb + squishOffset), dy0 = y - (ysb + squishOffset), dz0 = z - (zsb + squishOffset), dw0 = w - (wsb + squishOffset);
+			var c = (() => {
+				const xins = xs - xsb, yins = ys - ysb, zins = zs - zsb, wins = ws - wsb;
+				const inSum = xins + yins + zins + wins;
+				return lookup4D.get(
+					(zins - wins + 1)  |
+					((yins - zins + 1) << 1) |
+					((yins - wins + 1) << 2) |
+					((xins - yins + 1) << 3) |
+					((xins - zins + 1) << 4) |
+					((xins - wins + 1) << 5) |
+					(inSum << 6) |
+					((inSum + wins) << 8) |
+					((inSum + zins) << 11) |
+					((inSum + yins) << 14) |
+					((inSum + xins) << 17)
+				);
+			})();
+			var i, value = 0;
+			while (c !== undefined) {
+				const dx = dx0 + c.dx, dy = dy0 + c.dy, dz = dz0 + c.dz, dw = dw0 + c.dw;
+				let attn = 2 - dx * dx - dy * dy - dz * dz - dw * dw;
+				if (attn > 0) {
+					i = pD[(((((p[(xsb + c.xsb) & 0xFF] + (ysb + c.ysb)) & 0xFF) + (zsb + c.zsb)) & 0xFF) + (wsb + c.wsb)) & 0xFF];
+					attn *= attn;
+					value += attn * attn * (g[i++] * dx + g[i++] * dy  + g[i++] * dz + g[i] * dw);
+				}
+				c = c.next;
+			}
+			return value * NORM_4D;
+		},
+	}
+	return API;
 }
-exports.createNoise2D = createNoise2D;
-/**
- * Creates a 3D noise function
- * @param random the random function that will be used to build the permutation table
- * @returns {NoiseFunction3D}
- */
-function createNoise3D(random = Math.random) {
-    const perm = buildPermutationTable(random);
-    // precalculating these seems to yield a speedup of over 15%
-    const permGrad3x = new Float64Array(perm).map(v => grad3[(v % 12) * 3]);
-    const permGrad3y = new Float64Array(perm).map(v => grad3[(v % 12) * 3 + 1]);
-    const permGrad3z = new Float64Array(perm).map(v => grad3[(v % 12) * 3 + 2]);
-    return function noise3D(x, y, z) {
-        let n0, n1, n2, n3; // Noise contributions from the four corners
-        // Skew the input space to determine which simplex cell we're in
-        const s = (x + y + z) * F3; // Very nice and simple skew factor for 3D
-        const i = fastFloor(x + s);
-        const j = fastFloor(y + s);
-        const k = fastFloor(z + s);
-        const t = (i + j + k) * G3;
-        const X0 = i - t; // Unskew the cell origin back to (x,y,z) space
-        const Y0 = j - t;
-        const Z0 = k - t;
-        const x0 = x - X0; // The x,y,z distances from the cell origin
-        const y0 = y - Y0;
-        const z0 = z - Z0;
-        // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
-        // Determine which simplex we are in.
-        let i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
-        let i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
-        if (x0 >= y0) {
-            if (y0 >= z0) {
-                i1 = 1;
-                j1 = 0;
-                k1 = 0;
-                i2 = 1;
-                j2 = 1;
-                k2 = 0;
-            } // X Y Z order
-            else if (x0 >= z0) {
-                i1 = 1;
-                j1 = 0;
-                k1 = 0;
-                i2 = 1;
-                j2 = 0;
-                k2 = 1;
-            } // X Z Y order
-            else {
-                i1 = 0;
-                j1 = 0;
-                k1 = 1;
-                i2 = 1;
-                j2 = 0;
-                k2 = 1;
-            } // Z X Y order
-        }
-        else { // x0<y0
-            if (y0 < z0) {
-                i1 = 0;
-                j1 = 0;
-                k1 = 1;
-                i2 = 0;
-                j2 = 1;
-                k2 = 1;
-            } // Z Y X order
-            else if (x0 < z0) {
-                i1 = 0;
-                j1 = 1;
-                k1 = 0;
-                i2 = 0;
-                j2 = 1;
-                k2 = 1;
-            } // Y Z X order
-            else {
-                i1 = 0;
-                j1 = 1;
-                k1 = 0;
-                i2 = 1;
-                j2 = 1;
-                k2 = 0;
-            } // Y X Z order
-        }
-        // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
-        // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
-        // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z), where
-        // c = 1/6.
-        const x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
-        const y1 = y0 - j1 + G3;
-        const z1 = z0 - k1 + G3;
-        const x2 = x0 - i2 + 2.0 * G3; // Offsets for third corner in (x,y,z) coords
-        const y2 = y0 - j2 + 2.0 * G3;
-        const z2 = z0 - k2 + 2.0 * G3;
-        const x3 = x0 - 1.0 + 3.0 * G3; // Offsets for last corner in (x,y,z) coords
-        const y3 = y0 - 1.0 + 3.0 * G3;
-        const z3 = z0 - 1.0 + 3.0 * G3;
-        // Work out the hashed gradient indices of the four simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        const kk = k & 255;
-        // Calculate the contribution from the four corners
-        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
-        if (t0 < 0)
-            n0 = 0.0;
-        else {
-            const gi0 = ii + perm[jj + perm[kk]];
-            t0 *= t0;
-            n0 = t0 * t0 * (permGrad3x[gi0] * x0 + permGrad3y[gi0] * y0 + permGrad3z[gi0] * z0);
-        }
-        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
-        if (t1 < 0)
-            n1 = 0.0;
-        else {
-            const gi1 = ii + i1 + perm[jj + j1 + perm[kk + k1]];
-            t1 *= t1;
-            n1 = t1 * t1 * (permGrad3x[gi1] * x1 + permGrad3y[gi1] * y1 + permGrad3z[gi1] * z1);
-        }
-        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
-        if (t2 < 0)
-            n2 = 0.0;
-        else {
-            const gi2 = ii + i2 + perm[jj + j2 + perm[kk + k2]];
-            t2 *= t2;
-            n2 = t2 * t2 * (permGrad3x[gi2] * x2 + permGrad3y[gi2] * y2 + permGrad3z[gi2] * z2);
-        }
-        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
-        if (t3 < 0)
-            n3 = 0.0;
-        else {
-            const gi3 = ii + 1 + perm[jj + 1 + perm[kk + 1]];
-            t3 *= t3;
-            n3 = t3 * t3 * (permGrad3x[gi3] * x3 + permGrad3y[gi3] * y3 + permGrad3z[gi3] * z3);
-        }
-        // Add contributions from each corner to get the final noise value.
-        // The result is scaled to stay just inside [-1,1]
-        return 32.0 * (n0 + n1 + n2 + n3);
-    };
-}
-exports.createNoise3D = createNoise3D;
-/**
- * Creates a 4D noise function
- * @param random the random function that will be used to build the permutation table
- * @returns {NoiseFunction4D}
- */
-function createNoise4D(random = Math.random) {
-    const perm = buildPermutationTable(random);
-    // precalculating these leads to a ~10% speedup
-    const permGrad4x = new Float64Array(perm).map(v => grad4[(v % 32) * 4]);
-    const permGrad4y = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 1]);
-    const permGrad4z = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 2]);
-    const permGrad4w = new Float64Array(perm).map(v => grad4[(v % 32) * 4 + 3]);
-    return function noise4D(x, y, z, w) {
-        let n0, n1, n2, n3, n4; // Noise contributions from the five corners
-        // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
-        const s = (x + y + z + w) * F4; // Factor for 4D skewing
-        const i = fastFloor(x + s);
-        const j = fastFloor(y + s);
-        const k = fastFloor(z + s);
-        const l = fastFloor(w + s);
-        const t = (i + j + k + l) * G4; // Factor for 4D unskewing
-        const X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
-        const Y0 = j - t;
-        const Z0 = k - t;
-        const W0 = l - t;
-        const x0 = x - X0; // The x,y,z,w distances from the cell origin
-        const y0 = y - Y0;
-        const z0 = z - Z0;
-        const w0 = w - W0;
-        // For the 4D case, the simplex is a 4D shape I won't even try to describe.
-        // To find out which of the 24 possible simplices we're in, we need to
-        // determine the magnitude ordering of x0, y0, z0 and w0.
-        // Six pair-wise comparisons are performed between each possible pair
-        // of the four coordinates, and the results are used to rank the numbers.
-        let rankx = 0;
-        let ranky = 0;
-        let rankz = 0;
-        let rankw = 0;
-        if (x0 > y0)
-            rankx++;
-        else
-            ranky++;
-        if (x0 > z0)
-            rankx++;
-        else
-            rankz++;
-        if (x0 > w0)
-            rankx++;
-        else
-            rankw++;
-        if (y0 > z0)
-            ranky++;
-        else
-            rankz++;
-        if (y0 > w0)
-            ranky++;
-        else
-            rankw++;
-        if (z0 > w0)
-            rankz++;
-        else
-            rankw++;
-        // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
-        // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
-        // impossible. Only the 24 indices which have non-zero entries make any sense.
-        // We use a thresholding to set the coordinates in turn from the largest magnitude.
-        // Rank 3 denotes the largest coordinate.
-        // Rank 2 denotes the second largest coordinate.
-        // Rank 1 denotes the second smallest coordinate.
-        // The integer offsets for the second simplex corner
-        const i1 = rankx >= 3 ? 1 : 0;
-        const j1 = ranky >= 3 ? 1 : 0;
-        const k1 = rankz >= 3 ? 1 : 0;
-        const l1 = rankw >= 3 ? 1 : 0;
-        // The integer offsets for the third simplex corner
-        const i2 = rankx >= 2 ? 1 : 0;
-        const j2 = ranky >= 2 ? 1 : 0;
-        const k2 = rankz >= 2 ? 1 : 0;
-        const l2 = rankw >= 2 ? 1 : 0;
-        // The integer offsets for the fourth simplex corner
-        const i3 = rankx >= 1 ? 1 : 0;
-        const j3 = ranky >= 1 ? 1 : 0;
-        const k3 = rankz >= 1 ? 1 : 0;
-        const l3 = rankw >= 1 ? 1 : 0;
-        // The fifth corner has all coordinate offsets = 1, so no need to compute that.
-        const x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
-        const y1 = y0 - j1 + G4;
-        const z1 = z0 - k1 + G4;
-        const w1 = w0 - l1 + G4;
-        const x2 = x0 - i2 + 2.0 * G4; // Offsets for third corner in (x,y,z,w) coords
-        const y2 = y0 - j2 + 2.0 * G4;
-        const z2 = z0 - k2 + 2.0 * G4;
-        const w2 = w0 - l2 + 2.0 * G4;
-        const x3 = x0 - i3 + 3.0 * G4; // Offsets for fourth corner in (x,y,z,w) coords
-        const y3 = y0 - j3 + 3.0 * G4;
-        const z3 = z0 - k3 + 3.0 * G4;
-        const w3 = w0 - l3 + 3.0 * G4;
-        const x4 = x0 - 1.0 + 4.0 * G4; // Offsets for last corner in (x,y,z,w) coords
-        const y4 = y0 - 1.0 + 4.0 * G4;
-        const z4 = z0 - 1.0 + 4.0 * G4;
-        const w4 = w0 - 1.0 + 4.0 * G4;
-        // Work out the hashed gradient indices of the five simplex corners
-        const ii = i & 255;
-        const jj = j & 255;
-        const kk = k & 255;
-        const ll = l & 255;
-        // Calculate the contribution from the five corners
-        let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0 - w0 * w0;
-        if (t0 < 0)
-            n0 = 0.0;
-        else {
-            const gi0 = ii + perm[jj + perm[kk + perm[ll]]];
-            t0 *= t0;
-            n0 = t0 * t0 * (permGrad4x[gi0] * x0 + permGrad4y[gi0] * y0 + permGrad4z[gi0] * z0 + permGrad4w[gi0] * w0);
-        }
-        let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1 - w1 * w1;
-        if (t1 < 0)
-            n1 = 0.0;
-        else {
-            const gi1 = ii + i1 + perm[jj + j1 + perm[kk + k1 + perm[ll + l1]]];
-            t1 *= t1;
-            n1 = t1 * t1 * (permGrad4x[gi1] * x1 + permGrad4y[gi1] * y1 + permGrad4z[gi1] * z1 + permGrad4w[gi1] * w1);
-        }
-        let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2 - w2 * w2;
-        if (t2 < 0)
-            n2 = 0.0;
-        else {
-            const gi2 = ii + i2 + perm[jj + j2 + perm[kk + k2 + perm[ll + l2]]];
-            t2 *= t2;
-            n2 = t2 * t2 * (permGrad4x[gi2] * x2 + permGrad4y[gi2] * y2 + permGrad4z[gi2] * z2 + permGrad4w[gi2] * w2);
-        }
-        let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3 - w3 * w3;
-        if (t3 < 0)
-            n3 = 0.0;
-        else {
-            const gi3 = ii + i3 + perm[jj + j3 + perm[kk + k3 + perm[ll + l3]]];
-            t3 *= t3;
-            n3 = t3 * t3 * (permGrad4x[gi3] * x3 + permGrad4y[gi3] * y3 + permGrad4z[gi3] * z3 + permGrad4w[gi3] * w3);
-        }
-        let t4 = 0.6 - x4 * x4 - y4 * y4 - z4 * z4 - w4 * w4;
-        if (t4 < 0)
-            n4 = 0.0;
-        else {
-            const gi4 = ii + 1 + perm[jj + 1 + perm[kk + 1 + perm[ll + 1]]];
-            t4 *= t4;
-            n4 = t4 * t4 * (permGrad4x[gi4] * x4 + permGrad4y[gi4] * y4 + permGrad4z[gi4] * z4 + permGrad4w[gi4] * w4);
-        }
-        // Sum up and scale the result to cover the range [-1,1]
-        return 27.0 * (n0 + n1 + n2 + n3 + n4);
-    };
-}
-exports.createNoise4D = createNoise4D;
-/**
- * Builds a random permutation table.
- * This is exported only for (internal) testing purposes.
- * Do not rely on this export.
- * @private
- */
-function buildPermutationTable(random) {
-    const tableSize = 512;
-    const p = new Uint8Array(tableSize);
-    for (let i = 0; i < tableSize / 2; i++) {
-        p[i] = i;
-    }
-    for (let i = 0; i < tableSize / 2 - 1; i++) {
-        const r = i + ~~(random() * (256 - i));
-        const aux = p[i];
-        p[i] = p[r];
-        p[r] = aux;
-    }
-    for (let i = 256; i < tableSize; i++) {
-        p[i] = p[i - 256];
-    }
-    return p;
-}
-exports.buildPermutationTable = buildPermutationTable;
-//# sourceMappingURL=simplex-noise.js.map
