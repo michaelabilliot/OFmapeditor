@@ -1,3 +1,6 @@
+
+export default openSimplexNoise; // <<<====== ADD THIS LINE AT THE VERY END ======>>>
+
 function openSimplexNoise(clientSeed) {
 	"use strict";
 	const SQ5 = 2.23606797749979;
@@ -242,4 +245,5 @@ function openSimplexNoise(clientSeed) {
 		},
 	}
 	return API;
+    
 }
