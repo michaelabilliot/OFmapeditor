@@ -6,6 +6,7 @@ import { redrawCanvas, resetView, setInitialCanvasSize } from './canvasUtils.js'
 /**
  * Colorizes a loaded map image based on specific blue channel values,
  * similar to a reference PowerShell script, but made more robust.
+ * Uses a standard HTMLCanvasElement for broad compatibility.
  *
  * @param {HTMLImageElement} sourceImage - The fully loaded source image.
  * @param {string} imageType - The original MIME type (e.g., 'image/png').
@@ -21,16 +22,17 @@ async function colorizeLoadedMap(sourceImage, imageType) {
         const width = sourceImage.naturalWidth;
         const height = sourceImage.naturalHeight;
 
-        // Use an offscreen canvas for processing if available, otherwise fallback to standard canvas
-        const canvas = (typeof OffscreenCanvas === 'function')
-            ? new OffscreenCanvas(width, height)
-            : document.createElement('canvas');
+        // --- Use a standard HTMLCanvasElement ---
+        // Removed the OffscreenCanvas check for better compatibility
+        const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
+        // -----------------------------------------
 
         // Request '2d' context with willReadFrequently hint for performance
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) {
+            // This should be very rare with a standard canvas element
             return reject(new Error("Could not get 2D context for colorization."));
         }
 
@@ -39,89 +41,90 @@ async function colorizeLoadedMap(sourceImage, imageType) {
             ctx.drawImage(sourceImage, 0, 0);
 
             // Get pixel data
-            const imageData = ctx.getImageData(0, 0, width, height);
+            // Use try-catch around getImageData as it can fail in some edge cases (e.g., tainted canvas, though unlikely here)
+            let imageData;
+            try {
+                 imageData = ctx.getImageData(0, 0, width, height);
+            } catch (imageDataError) {
+                console.error("Failed to get image data from canvas:", imageDataError);
+                return reject(new Error("Could not read pixel data from the map image."));
+            }
+
             const data = imageData.data; // Uint8ClampedArray [R,G,B,A, R,G,B,A, ...]
 
             // --- Define Color Mapping Logic (based on blue channel, made robust) ---
-            // Define target colors first
             const waterColor = { r: 0, g: 0, b: 106 };
             const plainsBaseColor = { r: 190, g: 220, b: 140 };
             const mountainsPeakColor = { r: 245, g: 245, b: 200 };
 
             // Loop through each pixel (4 elements at a time: R, G, B, A)
             for (let i = 0; i < data.length; i += 4) {
+                // Read original values
                 const r = data[i];
                 const g = data[i + 1];
                 const b = data[i + 2];
                 const a = data[i + 3];
 
-                let newR = r, newG = g, newB = b; // Default to original color initially
+                // Initialize new values to original (simplifies logic)
+                let newR = r, newG = g, newB = b;
 
                 // --- Apply Robust Color Logic based on Blue Channel ---
-
-                // 1. Water: Check alpha first (transparent is water), then specific blue range
-                //    Using a small range around 106 instead of exact match for robustness.
-                if (a < 20 || (b >= 104 && b <= 108)) {
+                // Use ranges and check alpha for water
+                if (a < 20 || (b >= 104 && b <= 108)) { // Water
                     newR = waterColor.r; newG = waterColor.g; newB = waterColor.b;
-                }
-                // 2. Plains (Base): Blue <= 140 (and not water)
-                else if (b <= 140) {
+                } else if (b <= 140) { // Plains (Base)
                     newR = plainsBaseColor.r; newG = plainsBaseColor.g; newB = plainsBaseColor.b;
-                }
-                // 3. Plains (Gradient): 140 < Blue <= 158
-                else if (b <= 158) {
-                    // Calculate magnitude based on how far blue is from the plains baseline (140)
-                    // Use Math.max(0, ...) to prevent negative magnitude if b is exactly 140
+                } else if (b <= 158) { // Plains (Gradient)
                     const magnitude = Math.max(0, b - 140);
-                    newR = plainsBaseColor.r; // Red stays the same as base plains
-                    // Decrease Green based on magnitude, clamp at 0
-                    newG = Math.max(0, plainsBaseColor.g - (magnitude)); // Adjusted formula (was *2)
-                    newB = b; // Keep original blue for gradient effect
-                }
-                 // 4. Highlands (Gradient): 158 < Blue <= 178
-                else if (b <= 178) {
-                     const magnitude = Math.max(0, b - 140); // Still based on 140 baseline
-                     // Increase Red and Green, clamp at 255
-                     newR = Math.min(255, 190 + magnitude); // Adjusted base (was 200) and factor (was *2)
-                     newG = Math.min(255, 180 + magnitude); // Adjusted base (was 183) and factor (was *2)
+                    newR = plainsBaseColor.r;
+                    newG = Math.max(0, plainsBaseColor.g - magnitude); // Adjusted factor
+                    newB = b; // Keep original blue for gradient
+                } else if (b <= 178) { // Highlands (Gradient)
+                     const magnitude = Math.max(0, b - 140);
+                     newR = Math.min(255, 190 + magnitude); // Adjusted base/factor
+                     newG = Math.min(255, 180 + magnitude); // Adjusted base/factor
                      newB = b;
-                 }
-                // 5. Mountains (Gradient): 178 < Blue < 200 (exclusive upper bound)
-                 else if (b < 200) {
-                     const magnitude = Math.max(0, b - 140); // Still based on 140 baseline
-                     // Increase R/G towards white/grey, clamp at 255
+                 } else if (b < 200) { // Mountains (Gradient) - B is strictly less than 200
+                     const magnitude = Math.max(0, b - 140);
                      newR = Math.min(255, 210 + Math.floor(magnitude / 1.5)); // Adjusted base/factor
                      newG = Math.min(255, 210 + Math.floor(magnitude / 1.5)); // Adjusted base/factor
                      newB = b;
-                 }
-                 // 6. Mountains (Peak): Blue >= 200
-                 else { // b >= 200
+                 } else { // Mountains (Peak) - B >= 200
                      newR = mountainsPeakColor.r;
                      newG = mountainsPeakColor.g;
                      newB = mountainsPeakColor.b;
                  }
 
-                // Update the imageData array (already clamped by Uint8ClampedArray)
+                // Update the imageData array
                 data[i] = newR;     // R
                 data[i + 1] = newG; // G
                 data[i + 2] = newB; // B
-                data[i + 3] = 255;  // A (Force full opacity for all non-transparent areas)
+                data[i + 3] = 255;  // A (Force full opacity)
             }
 
             // Put the modified data back onto the canvas
             ctx.putImageData(imageData, 0, 0);
 
-            // Get the data URL of the colorized canvas
+            // --- Generate Data URL ---
             // Use original imageType if valid, otherwise default to png
             const validImageType = imageType?.startsWith('image/') ? imageType : 'image/png';
-            const dataUrl = canvas.toDataURL(validImageType);
+            // Use try-catch for toDataURL as it can fail in rare cases (e.g., huge canvas)
+            let dataUrl;
+            try {
+                dataUrl = canvas.toDataURL(validImageType);
+            } catch (dataUrlError) {
+                console.error("Failed to generate Data URL from canvas:", dataUrlError);
+                return reject(new Error("Could not convert the processed map to a displayable format."));
+            }
+
             updateStatus("Map colorization complete.");
-            resolve(dataUrl);
+            resolve(dataUrl); // Resolve the promise with the data URL
 
         } catch (error) {
-            console.error("Error during map colorization:", error);
+            // Catch any unexpected errors during drawing or processing
+            console.error("Unexpected error during map colorization:", error);
             updateStatus("Error during map colorization.", true);
-            reject(error);
+            reject(error); // Reject the promise
         }
     });
 }
@@ -166,6 +169,7 @@ export async function handleMapImageLoad(file) {
                 const mapBaseName = originalFileName.split('.').slice(0, -1).join('.') || "Untitled Map";
 
                 // --- COLORIZATION STEP ---
+                // Await the result of the colorization promise
                 const colorizedDataUrl = await colorizeLoadedMap(tempImage, originalFileType);
 
                 // --- Create the final mapImage object for the colorized version ---
@@ -224,13 +228,14 @@ export async function handleMapImageLoad(file) {
                 finalMapImage.src = colorizedDataUrl;
 
             } catch (error) {
-                // Catch errors specifically from the colorization process
-                console.error("Error during map colorization process:", error);
-                await showModal('alert', 'Map Processing Error', `Failed to process/colorize the map: ${error.message}`);
-                updateStatus("Error processing map image.", true);
+                // Catch errors specifically from the colorization process or other logic within this block
+                console.error("Error during map loading/colorization process:", error);
+                // Use the error message directly if available
+                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during map processing.";
+                await showModal('alert', 'Map Processing Error', `Failed to process/colorize the map: ${errorMessage}`);
+                updateStatus(`Error processing map image: ${errorMessage}`, true);
                 // Reset state as the process failed
                 cfg.setMapImage(null); // Ensure no partially loaded map is kept
-                // ... (reset other states as in finalMapImage.onerror)
                  cfg.setMapInfo({ name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" });
                  if(cfg.jsonLoadLabel) cfg.jsonLoadLabel.setAttribute('data-disabled', 'true');
                  if(cfg.saveButton) cfg.saveButton.disabled = true;
