@@ -9,7 +9,7 @@ export let inlineEditPanel, inlineEditName, inlineEditStrength, inlineEditSave, 
 export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
-export let controlsDiv, instructionsDiv; // Added for populating HTML
+export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
 
 // --- State Variables ---
 let _markerRadius = 8;
@@ -60,6 +60,7 @@ export function assignElements() {
     coordinateDisplay = document.getElementById('coordinateDisplay');
     statusDiv = document.getElementById('status');
     instructionsDiv = document.getElementById('instructions');
+    infoPanel = document.getElementById('info-panel'); // *** ADDED THIS LINE ***
     inlineEditPanel = document.getElementById('inlineEditPanel');
     inlineEditName = document.getElementById('inlineEditName');
     inlineEditStrength = document.getElementById('inlineEditStrength');

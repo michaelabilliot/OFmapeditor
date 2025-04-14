@@ -15,13 +15,14 @@ function initializeApp() {
     cfg.assignElements();
 
     // 2. Check if essential STATIC elements were found (needed for population)
+    // *** This is the crucial check ***
     if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel ) {
         console.error("Essential static DOM elements not found! Aborting initialization. Check HTML structure and IDs.");
         // Provide a user-friendly error message in the body
         document.body.innerHTML = `<div style="padding: 20px; text-align: center;">
             <h1>Initialization Error</h1>
             <p>Could not start the map editor because some essential HTML elements are missing.</p>
-            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', etc.</p>
+            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel' etc.</p>
             <p>Check the browser console (F12) for more details.</p>
             </div>`;
         return; // Stop initialization
