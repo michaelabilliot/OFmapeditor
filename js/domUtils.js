@@ -23,15 +23,44 @@ export function populateDynamicElements() {
     } else {
         console.error("Cannot populate settings panel: #settingsPanel not found.");
     }
+
     if (cfg.controlsDiv) {
-        cfg.controlsDiv.innerHTML = `<div class="control-group"><input type="file" id="mapImageInput" class="visually-hidden" accept="image/*"><label id="loadMapLabel" class="file-label-button">Load Map</label></div><div class="control-group"><input type="file" id="jsonLoadInput" class="visually-hidden" accept=".json,application/json"><label for="jsonLoadInput" id="jsonLoadLabel" class="file-label-button" data-disabled="true">Load JSON</label></div><div class="control-group"><button id="loadFlagsButton" disabled>Load Flags</button></div><div class="control-group"><button id="saveButton" disabled>Save ZIP</button></div><div id="zoomControls" class="control-group"><button id="zoomOutButton" title="Zoom Out (-)">-</button><span id="zoomDisplay">100%</span><button id="zoomInButton" title="Zoom In (+)">+</button><button id="zoomResetButton" title="Reset View (0)">Reset</button></div>`;
+        // <<< MODIFIED: Include ALL buttons in this string >>>
+        cfg.controlsDiv.innerHTML = `
+            <div class="control-group">
+                <input type="file" id="mapImageInput" class="visually-hidden" accept="image/*">
+                <label id="loadMapLabel" class="file-label-button">Load Map</label>
+            </div>
+            <div class="control-group">
+                 <button id="generateMapButton">Generate New Map</button>
+            </div>
+            <div class="control-group">
+                <input type="file" id="jsonLoadInput" class="visually-hidden" accept=".json,application/json">
+                <label for="jsonLoadInput" id="jsonLoadLabel" class="file-label-button" data-disabled="true">Load JSON</label>
+            </div>
+            <div class="control-group">
+                <button id="loadFlagsButton" disabled>Load Flags</button>
+            </div>
+            <div class="control-group">
+                <button id="saveButton" disabled>Save ZIP</button>
+            </div>
+            <div id="zoomControls" class="control-group">
+                <button id="zoomOutButton" title="Zoom Out (-)">-</button>
+                <span id="zoomDisplay">100%</span>
+                <button id="zoomInButton" title="Zoom In (+)">+</button>
+                <button id="zoomResetButton" title="Reset View (0)">Reset</button>
+            </div>
+        `;
+        // <<< END MODIFICATION >>>
     } else {
          console.error("Cannot populate controls: #controls not found.");
     }
+
     if (cfg.instructionsDiv) {
-        cfg.instructionsDiv.innerHTML = `<h3>Instructions</h3><p><b>Loading:</b></p><ul><li><span class="highlight">Load Map:</span> Select base map image (<span class="highlight">it will be auto-colorized!</span>).</li><li><span class="highlight">Load JSON:</span> (Optional) Load existing nation data.</li><li><span class="highlight">Load Flags:</span> Load flag images (<span class="highlight">PNG or SVG</span>). You'll be prompted after loading JSON, or use the button. <span class="highlight">Select ALL relevant flag files</span> from their folder.</li><li><span class="highlight">Save ZIP:</span> Save project (map, json, flags) as ZIP. <span class="highlight">All flags are saved as SVG</span> (PNGs embedded).</li></ul><p><b>Map Interaction:</b></p><ul><li><b>Pan:</b> Click & Drag empty space.</li><li><b>Zoom:</b> Mouse Wheel or +/- keys.</li><li><b>Reset View:</b> '0' key or Reset button.</li></ul><p><b>Nations:</b></p><ul><li><b>Add:</b> Click empty space.</li><li><b>Select:</b> Click marker or list item (in Info Panel).</li><li><b>Move:</b> Click & Drag selected marker.</li><li><b>Edit:</b> Double-Click marker (popup).</li><li><b>Delete:</b> Select, then Delete/Backspace key OR '✖' in list (in Info Panel).</li><li><span class="highlight">Go To (List):</span> Double-click list item to <span class="highlight">smoothly pan</span> map.</li><li><b>Add/Change Flag:</b> Select nation, use 'Upload Flag' in Info Panel (<span class="highlight">PNG or SVG</span>).</li><li><b>Remove Flag:</b> Select nation, use '✖ Remove' in Info Panel.</li></ul><p><b>Other:</b></p><ul><li><b>Deselect:</b> Press Esc key.</li><li><b>Save:</b> Press 'S' key (saves ZIP).</li><li><b>Settings (⚙️):</b> Theme, sizes (marker, text, flag).</li></ul>`;
+        // <<< ENSURE THIS RUNS: Add console log if fails >>>
+        cfg.instructionsDiv.innerHTML = `<h3>Instructions</h3><p><b>Loading:</b></p><ul><li><span class="highlight">Load Map:</span> Select base map image (<span class="highlight">it will be auto-colorized!</span>).</li><li><span class="highlight">Generate Map:</span> Create a new map using procedural generation.</li><li><span class="highlight">Load JSON:</span> (Optional) Load existing nation data.</li><li><span class="highlight">Load Flags:</span> Load flag images (<span class="highlight">PNG or SVG</span>). You'll be prompted after loading JSON, or use the button. <span class="highlight">Select ALL relevant flag files</span> from their folder.</li><li><span class="highlight">Save ZIP:</span> Save project (map, json, flags) as ZIP. <span class="highlight">All flags are saved as SVG</span> (PNGs embedded).</li></ul><p><b>Map Interaction:</b></p><ul><li><b>Pan:</b> Click & Drag empty space.</li><li><b>Zoom:</b> Mouse Wheel or +/- keys.</li><li><b>Reset View:</b> '0' key or Reset button.</li></ul><p><b>Nations:</b></p><ul><li><b>Add:</b> Click empty space.</li><li><b>Select:</b> Click marker or list item (in Info Panel).</li><li><b>Move:</b> Click & Drag selected marker.</li><li><b>Edit:</b> Double-Click marker (popup).</li><li><b>Delete:</b> Select, then Delete/Backspace key OR '✖' in list (in Info Panel).</li><li><span class="highlight">Go To (List):</span> Double-click list item to <span class="highlight">smoothly pan</span> map.</li><li><b>Add/Change Flag:</b> Select nation, use 'Upload Flag' in Info Panel (<span class="highlight">PNG or SVG</span>).</li><li><b>Remove Flag:</b> Select nation, use '✖ Remove' in Info Panel.</li></ul><p><b>Other:</b></p><ul><li><b>Deselect:</b> Press Esc key.</li><li><b>Save:</b> Press 'S' key (saves ZIP).</li><li><b>Settings (⚙️):</b> Theme, sizes (marker, text, flag).</li></ul>`;
     } else {
-         console.error("Cannot populate instructions: #instructions not found.");
+         console.error("Cannot populate instructions: #instructions not found."); // <<< This error might be showing in your console
     }
 }
 
@@ -167,9 +196,10 @@ export function updateInfoPanel(nationIndex) {
                 cfg.infoFlagRemoveButton.disabled = false;
                 let flagFileName = nation.flag ? `${nation.flag}.${nation.flagDataType || '?'}` : 'Unknown Flag File';
                 let statusText = `Flag: ${flagFileName}`;
-                if (nation.flagDataType === 'png') {
-                    statusText += ' (will save as .svg)';
-                }
+                 // Clarify SVG saving for non-SVG originals
+                 if (nation.flagDataType && nation.flagDataType !== 'svg') {
+                    statusText += ` (will save as .svg)`;
+                 }
                 cfg.infoFlagStatus.textContent = statusText;
                 cfg.infoFlagStatus.style.display = 'block';
             } else if (nation.flag) {
@@ -205,8 +235,8 @@ export function openInlineEditor(index, mapX, mapY) {
     const canvasPos = mapToCanvasCoords(mapX, mapY);
     if (!canvasPos) return; // Handle case where conversion might fail
 
-    const panelWidth = cfg.inlineEditPanel.offsetWidth || 220;
-    const panelHeight = cfg.inlineEditPanel.offsetHeight || 130;
+    const panelWidth = cfg.inlineEditPanel.offsetWidth || 220; // Use offsetWidth or fallback
+    const panelHeight = cfg.inlineEditPanel.offsetHeight || 130; // Use offsetHeight or fallback
     const canvasRect = cfg.canvas?.getBoundingClientRect(); // Use optional chaining
 
     if (!canvasRect) return; // Cannot position if canvas rect is unavailable
@@ -214,15 +244,36 @@ export function openInlineEditor(index, mapX, mapY) {
     let panelX = canvasPos.x + (cfg.markerRadius() + 15); // Use getter cfg.markerRadius()
     let panelY = canvasPos.y + 5;
 
-    // Adjust panel position if it goes off-screen
-    if (cfg.canvasContainer) {
-        if (panelX + panelWidth > cfg.canvasContainer.clientWidth - 10) {
-            panelX = canvasPos.x - panelWidth - (cfg.markerRadius() + 15); // Use getter
-        }
-        if (panelY + panelHeight > cfg.canvasContainer.clientHeight - 10) {
-            panelY = canvasPos.y - panelHeight - 5;
-        }
-    }
+    // Adjust panel position if it goes off-screen relative to canvasContainer
+     const containerRect = cfg.canvasContainer?.getBoundingClientRect();
+     if (containerRect) {
+         // Calculate position relative to the container's viewport coordinates
+         const relativeCanvasX = canvasRect.left - containerRect.left + canvasPos.x;
+         const relativeCanvasY = canvasRect.top - containerRect.top + canvasPos.y;
+
+         panelX = relativeCanvasX + (cfg.markerRadius() + 15);
+         panelY = relativeCanvasY + 5;
+
+
+         if (panelX + panelWidth > cfg.canvasContainer.clientWidth - 10) {
+            // Position to the left of the marker
+            panelX = relativeCanvasX - panelWidth - (cfg.markerRadius() + 15);
+         }
+         if (panelY + panelHeight > cfg.canvasContainer.clientHeight - 10) {
+            // Position above the marker
+             panelY = relativeCanvasY - panelHeight - 5;
+         }
+     } else { // Fallback if containerRect not available (position relative to canvas only)
+          if (panelX + panelWidth > canvasRect.width - 10) {
+             panelX = canvasPos.x - panelWidth - (cfg.markerRadius() + 15);
+          }
+          if (panelY + panelHeight > canvasRect.height - 10) {
+             panelY = canvasPos.y - panelHeight - 5;
+          }
+     }
+
+
+    // Ensure panel stays within bounds (relative to container or canvas)
     panelX = Math.max(5, panelX);
     panelY = Math.max(5, panelY);
 
@@ -362,7 +413,9 @@ export function showModal(type, title, message, options = {}) {
         cfg.setCurrentModalResolve(resolve);
 
         cfg.modalTitle.textContent = title;
-        cfg.modalMessage.textContent = message;
+        // Use innerHTML for message to allow line breaks with \n (after setting white-space: pre-wrap in CSS)
+        cfg.modalMessage.innerHTML = message;
+
 
         cfg.modalInputContainer.style.display = 'none'; // Reset input display
         cfg.modalInput.value = ''; // Reset input value
@@ -383,7 +436,7 @@ export function showModal(type, title, message, options = {}) {
                 // Use function expressions for handlers to ensure 'this' context isn't an issue
                 // and to easily remove later
                 cfg.modalOk.onclick = () => { hideModal(); resolve(true); };
-                cfg.modalDialog.onkeydown = (e) => { if (e.key === 'Enter') cfg.modalOk.click(); }; // Handle Enter key
+                cfg.modalDialog.onkeydown = (e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); cfg.modalOk.click(); }}; // Handle Enter/Escape
                 cfg.modalOk.focus();
                 break;
             case 'confirm':
@@ -393,7 +446,11 @@ export function showModal(type, title, message, options = {}) {
                 cfg.modalDeny.style.display = 'inline-block';
                 cfg.modalConfirm.onclick = () => { hideModal(); resolve(true); };
                 cfg.modalDeny.onclick = () => { hideModal(); resolve(false); };
-                cfg.modalDialog.onkeydown = null; // Clear dialog keydown for confirm/deny
+                // Handle Enter (Confirm) / Escape (Deny) on the dialog itself
+                cfg.modalDialog.onkeydown = (e) => {
+                     if (e.key === 'Enter') { e.preventDefault(); cfg.modalConfirm.click(); }
+                     else if (e.key === 'Escape') { e.preventDefault(); cfg.modalDeny.click(); }
+                 };
                 cfg.modalConfirm.focus();
                 break;
             case 'prompt':
@@ -406,8 +463,16 @@ export function showModal(type, title, message, options = {}) {
                 cfg.modalOk.onclick = () => { hideModal(); resolve(cfg.modalInput.value); };
                 cfg.modalCancel.onclick = () => { hideModal(); resolve(null); };
                 // Handle Enter key specifically on the input for prompt
-                cfg.modalInput.onkeydown = (e) => { if (e.key === 'Enter') cfg.modalOk.click(); };
-                 cfg.modalDialog.onkeydown = null; // Clear dialog keydown
+                cfg.modalInput.onkeydown = (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); cfg.modalOk.click(); }
+                    else if (e.key === 'Escape') { e.preventDefault(); cfg.modalCancel.click(); } // Allow Esc on input too
+                };
+                // Allow Escape on dialog only if input *isn't* focused (prevents double cancel)
+                 cfg.modalDialog.onkeydown = (e) => {
+                     if (e.key === 'Escape' && document.activeElement !== cfg.modalInput) {
+                         e.preventDefault(); cfg.modalCancel.click();
+                     }
+                 };
                 cfg.modalInput.focus();
                 cfg.modalInput.select();
                 break;

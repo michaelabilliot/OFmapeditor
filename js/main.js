@@ -15,39 +15,73 @@ function initializeApp() {
     console.log("Initializing OpenFront Map Editor...");
 
     // 1. Assign references to STATIC DOM elements first (containers etc.)
+    //    This MUST find #controls, #instructions, #settingsPanel etc.
     cfg.assignElements();
 
     // 2. Check if essential STATIC elements were found
     if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv) {
-        console.error("Essential static DOM elements not found! Aborting initialization.");
-        document.body.innerHTML = "<h1>Error: Could not initialize editor. Essential container elements missing. Check HTML IDs.</h1>";
-        return;
+        console.error("Essential static DOM elements (canvas, status, panels, controls, instructions) not found! Check HTML IDs. Aborting initialization.");
+        // Display a user-friendly message if possible
+        const bodyContent = document.body ? document.body.innerHTML : '';
+         if (document.body) {
+             document.body.innerHTML = `<h1>Error: Could not initialize editor.</h1><p>Essential container elements (like #controls, #instructions, #settingsPanel) are missing in the HTML or could not be found by the script.</p><p>Please check the browser's developer console (F12) for more specific errors.</p><hr><pre>${bodyContent}</pre>`; // Show original body for debugging
+         }
+        return; // Stop execution
+    } else {
+        console.log("Essential static containers found.");
     }
 
     // 3. Populate dynamic HTML content (controls, instructions, settings)
-    //    This requires the container elements (cfg.settingsPanel etc.) to be assigned already.
-    domUtils.populateDynamicElements(); // Make sure this ADDS to #controls or modifies it carefully if the Generate button is static HTML
+    //    This relies on cfg.controlsDiv, cfg.instructionsDiv etc. being valid references.
+    console.log("Populating dynamic elements...");
+    domUtils.populateDynamicElements(); // <<< CRITICAL STEP
 
-    // 4. Assign references AGAIN to capture the DYNAMICALLY added elements AND statically added ones like GenerateMapButton
-    //    This will re-assign static elements too, but crucially finds the dynamic ones now.
+    // 4. Assign references AGAIN to capture the DYNAMICALLY added elements
+    //    This finds buttons etc. INSIDE the populated innerHTML.
+    console.log("Re-assigning elements to find dynamic content...");
     cfg.assignElements();
 
-    // 5. Check if essential DYNAMIC elements were found (optional but good practice)
-    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.generateMapButton) { // Added check for generateMapButton
-         console.warn("Some dynamic or essential UI elements might be missing. Check populateDynamicElements(), HTML IDs, and config.js.");
-         // Decide if this is critical enough to abort
-    }
+    // 5. Check if essential DYNAMIC elements were found
+     // Check a few key dynamic elements that *should* exist now
+     const essentialDynamicIds = ['loadMapLabel', 'saveButton', 'markerSizeInput', 'generateMapButton', 'closeSettingsButton', 'darkModeToggle'];
+     let missingDynamic = false;
+     essentialDynamicIds.forEach(id => {
+         // Use the cfg object to check if the variable is assigned
+         let elementFound = false;
+          for (const key in cfg) {
+              if (key.toLowerCase().includes(id.toLowerCase()) && cfg[key]) {
+                  elementFound = true;
+                  break;
+              }
+          }
+          // Check common element properties directly too
+         if (!elementFound && !document.getElementById(id)) {
+             console.warn(`Essential dynamic UI element with expected ID '${id}' might be missing or wasn't assigned in config.js.`);
+             missingDynamic = true;
+         }
+     });
+     if (missingDynamic) {
+         console.error("One or more essential dynamic UI elements were not found after population. Event listeners might fail. Check populateDynamicElements() and HTML IDs.");
+         // Consider showing an error to the user or aborting if critical features won't work
+         // domUtils.showModal('alert', 'Initialization Error', 'Failed to create essential UI components. Some features may not work.');
+     } else {
+         console.log("Essential dynamic elements checked.");
+     }
+
 
     // 6. Load settings (theme, sizes) and apply them
     //    This requires the settings input elements to be assigned now.
-    domUtils.loadSettings();
+    console.log("Loading and applying settings...");
+    domUtils.loadSettings(); // Includes applySettings
 
     // 7. Setup all event listeners
     //    This requires all button/input elements to be assigned.
+    console.log("Setting up event listeners...");
     setupEventListeners();
 
     // 8. Set initial UI states
-    cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none';
+    console.log("Setting initial UI states...");
+    if(cfg.settingsPanel) cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none';
     domUtils.updateNationList();
     domUtils.updateInfoPanel(null);
     canvasUtils.setInitialCanvasSize(); // Set initial canvas size based on container
@@ -56,10 +90,12 @@ function initializeApp() {
 
     // 9. Setup Resize Observer
     if (cfg.canvasContainer) {
+        console.log("Setting up Resize Observer...");
         const resizeObserver = new ResizeObserver(entries => {
             // We might get multiple entries, handle the container resize
             for (let entry of entries) {
                 if (entry.target === cfg.canvasContainer) {
+                    // Add a debounce or throttle here if resize events fire too rapidly
                     handlers.handleResize(); // Call the handler function
                 }
             }
@@ -71,6 +107,7 @@ function initializeApp() {
 
 
     console.log("Map Editor Initialized Successfully.");
+     domUtils.updateStatus("Load a map image or generate a new map to begin."); // Update initial status
 }
 
 function setupEventListeners() {
@@ -91,7 +128,7 @@ function setupEventListeners() {
     cfg.jsonLoadInput?.addEventListener('change', handlers.handleJsonFileSelect); // Listener on input, triggered by label click
     cfg.loadFlagsButton?.addEventListener('click', dataUtils.promptAndLoadFlags);
     cfg.saveButton?.addEventListener('click', dataUtils.saveProjectAsZip);
-    cfg.generateMapButton?.addEventListener('click', handleGenerateMapClick); // <<<--- ADDED LISTENER
+    cfg.generateMapButton?.addEventListener('click', handleGenerateMapClick); // Listener added
 
     // Zoom Controls
     cfg.zoomInButton?.addEventListener('click', () => canvasUtils.changeZoom(1.25));
@@ -108,11 +145,14 @@ function setupEventListeners() {
     // Double-click for inline edit
     cfg.canvas?.addEventListener('dblclick', (event) => {
          if (!cfg.mapImage || event.button !== 0 || cfg.isPanning || cfg.draggingNation || cfg.currentModalResolve || cfg.isPanningAnimationActive || !cfg.inlineEditPanel) return;
+         // Check if click is inside inline editor
+         if (cfg.inlineEditPanel && cfg.inlineEditPanel.style.display === 'block' && cfg.inlineEditPanel.contains(event.target)) return;
+
          const canvasPos = canvasUtils.getCanvasMousePos(event);
          if (!canvasPos) return;
          const mapPos = canvasUtils.canvasToMapCoords(canvasPos.x, canvasPos.y);
          const clickedNationIndex = canvasUtils.getNationAtPos(mapPos);
-         if (clickedNationIndex !== null && !cfg.inlineEditPanel.contains(event.target)) {
+         if (clickedNationIndex !== null) {
              event.preventDefault(); // Prevent text selection etc.
              cfg.setSelectedNationIndex(clickedNationIndex);
              domUtils.openInlineEditor(clickedNationIndex, cfg.nations[clickedNationIndex].coordinates[0], cfg.nations[clickedNationIndex].coordinates[1]);
@@ -135,10 +175,11 @@ function setupEventListeners() {
     document.addEventListener('keydown', handlers.handleDocumentKeyDown);
 
     // Note: Nation list item listeners (hover, click, dblclick, delete) are added dynamically in domUtils.updateNationList()
+    console.log("Event listeners setup complete.");
 }
 
 
-// --- Map Generation Handler --- <<<--- NEW FUNCTION
+// --- Map Generation Handler ---
 async function handleGenerateMapClick() {
     // Prevent generation if busy
     if (cfg.isPanning || cfg.draggingNation || cfg.currentModalResolve || cfg.isPanningAnimationActive) {
@@ -150,7 +191,7 @@ async function handleGenerateMapClick() {
     const confirmGenerate = await domUtils.showModal(
         'confirm',
         'Generate New Map?',
-        'This will replace the current map and clear all nations. Are you sure?',
+        'This will replace the current map and clear all nations.\nAre you sure?', // Added line break for clarity
         { confirmText: 'Generate', denyText: 'Cancel' }
     );
 
