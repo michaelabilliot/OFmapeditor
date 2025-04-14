@@ -4,66 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenFront Map Editor</title>
-    <!-- Load JSZip library (needed globally) -->
+    <!-- Load JSZip library (needed globally for saving) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Optional: Load FileSaver.js for more robust downloads -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- Link to the CSS file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
+    <!-- Settings Button (always visible) -->
     <button id="settingsButton" title="Toggle Settings Panel">⚙️</button>
 
+    <!-- Settings Panel (Populated by JS, visibility toggled) -->
     <div id="settingsPanel"> <!-- Populated by JS --> </div>
 
+     <!-- Main Application Container -->
      <div id="main-container">
         <h1>OpenFront Map Editor</h1>
 
-        <!-- Controls div - Content now FULLY populated by domUtils.populateDynamicElements -->
-        <div id="controls"></div>
+        <!-- Controls Bar (Populated by JS) -->
+        <div id="controls"> <!-- Populated by JS --> </div>
 
+         <!-- Top Info Bar (Coordinates and Status) -->
          <div id="top-info">
             <div id="coordinateDisplay">X: ---, Y: ---</div>
             <div id="status">Load a map image to begin...</div>
          </div>
 
-        <!-- Editor area - Ensure CSS handles layout correctly -->
+        <!-- Main Editor Area (Instructions, Canvas, Info Panel) -->
         <div id="editor-area">
-            <!-- Instructions div - MUST be populated by JS for layout to work -->
-            <div id="instructions"></div>
+            <!-- Instructions Panel (Populated by JS) -->
+            <div id="instructions"> <!-- Populated by JS --> </div>
 
+            <!-- Canvas Container -->
             <div id="canvas-container">
-                <canvas id="mapCanvas"> Canvas not supported. </canvas>
+                <canvas id="mapCanvas" tabindex="0"> <!-- Added tabindex to allow focus -->
+                    Your browser does not support the HTML5 canvas element.
+                </canvas>
+                 <!-- Inline Editor Panel (Positioned over canvas) -->
                  <div id="inlineEditPanel">
-                     <label for="inlineEditName">Name:</label> <input type="text" id="inlineEditName">
-                     <label for="inlineEditStrength">Strength:</label> <input type="number" id="inlineEditStrength" min="0">
-                     <div> <button id="inlineEditSave">Save</button> <button id="inlineEditCancel">Cancel</button> </div>
+                     <label for="inlineEditName">Name:</label>
+                     <input type="text" id="inlineEditName">
+                     <label for="inlineEditStrength">Strength:</label>
+                     <input type="number" id="inlineEditStrength" min="0"> <!-- Allow any integer >= 0 -->
+                     <div>
+                        <button id="inlineEditSave">Save</button>
+                        <button id="inlineEditCancel">Cancel</button>
+                     </div>
                  </div>
             </div>
 
+            <!-- Info Panel (Nation Details and List) -->
              <div id="info-panel">
                  <h3>Nation Info</h3>
                  <div id="info-content">
                      <!-- Flag Section -->
                      <div id="info-flag-container">
                          <img id="info-flag-preview" src="#" alt="Nation Flag Preview">
-                         <p id="info-flag-status">Flag status</p>
+                         <p id="info-flag-status">Flag status placeholder</p> <!-- Placeholder text -->
                          <div id="info-flag-controls">
-                             <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml"> <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label> <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
+                             <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml, .png, .jpg, .jpeg, .gif, .webp, .svg">
+                             <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label>
+                             <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
                          </div>
                      </div>
+                     <!-- Nation Details -->
                      <p><strong>Name:</strong> <span id="info-name">--</span></p>
                      <p><strong>Strength:</strong> <span id="info-strength">--</span></p>
-                     <p id="info-placeholder"><small><i>Select a nation on the map or list.</i></small></p>
+                     <p id="info-placeholder"><small><i>Select a nation on the map or list to see details.</i></small></p>
                  </div>
                  <hr>
+                 <!-- Nation List Section -->
                  <h4>Nation List (<span id="nationListCount">0</span>)</h4>
-                 <div id="nationListContainer"> <ul id="nationList"></ul> </div>
+                 <div id="nationListContainer">
+                    <ul id="nationList">
+                        <!-- List items populated by JS -->
+                    </ul>
+                 </div>
              </div>
         </div>
     </div>
 
-    <!-- Modal Structure -->
-    <div id="modal-overlay"> <div id="modal-dialog"> <h3 id="modal-title">Modal Title</h3> <p id="modal-message">Modal message goes here.</p> <div id="modal-input-container" style="display: none;"> <input type="text" id="modal-input"> </div> <div id="modal-buttons"> <button id="modal-cancel" style="display: none;">Cancel</button> <button id="modal-deny" style="display: none;">No</button> <button id="modal-confirm" style="display: none;">Yes</button> <button id="modal-ok">OK</button> </div> </div> </div>
+    <!-- Modal Structure (Hidden by default) -->
+    <div id="modal-overlay">
+        <div id="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">
+            <h3 id="modal-title">Modal Title</h3>
+            <p id="modal-message">Modal message goes here.</p>
+            <div id="modal-input-container" style="display: none;">
+                <input type="text" id="modal-input" aria-label="Input for prompt"> <!-- Added aria-label -->
+            </div>
+            <div id="modal-buttons">
+                <button id="modal-cancel" style="display: none;">Cancel</button>
+                <button id="modal-deny" style="display: none;">No</button>
+                <button id="modal-confirm" style="display: none;">Yes</button>
+                <button id="modal-ok">OK</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Load the main JavaScript module -->
     <script type="module" src="js/main.js"></script>

@@ -10,13 +10,12 @@ export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv; // Added for populating HTML
-export let generateMapButton; // <<<--- ADDED
 
 // --- State Variables ---
 let _markerRadius = 8;
 let _nationTextSize = 12;
 let _flagBaseDisplaySize = 30;
-export let nations = []; // { coordinates: [x, y], name: "", strength: 0, flag: "base_name" | null, flagImage: Image | null, flagData: string | null, flagDataType: 'svg' | 'png' | null, flagWidth: number | null, flagHeight: number | null }
+export let nations = []; // { coordinates: [x, y], name: "", strength: 0, flag: "base_name" | null, flagImage: Image | null, flagData: string | null, flagDataType: 'svg' | 'png' | 'jpeg' | 'gif' | 'webp' | null, flagWidth: number | null, flagHeight: number | null }
 export let mapImage = null; // Holds the *colorized* map image
 export let mapInfo = { name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" };
 export let selectedNationIndex = null;
@@ -41,12 +40,13 @@ export let currentModalResolve = null;
 export let isPanningAnimationActive = false;
 
 // --- Getters for state variables that need setters ---
-// This allows reading them directly like cfg.markerRadius
+// This allows reading them directly like cfg.markerRadius()
 export const markerRadius = () => _markerRadius;
 export const nationTextSize = () => _nationTextSize;
 export const flagBaseDisplaySize = () => _flagBaseDisplaySize;
 
 // --- Function to assign elements after DOM load ---
+// NOTE: Called twice in main.js - once for static elements, then again after populateDynamicElements
 export function assignElements() {
     canvas = document.getElementById('mapCanvas');
     canvasContainer = document.getElementById('canvas-container');
@@ -108,7 +108,6 @@ export function assignElements() {
     nationTextSizeValue = document.getElementById('nationTextSizeValue');
     flagSizeInput = document.getElementById('flagSizeInput');
     flagSizeValue = document.getElementById('flagSizeValue');
-    generateMapButton = document.getElementById('generateMapButton'); // <<<--- ADDED
 }
 
 // --- State Modifiers (Setters) ---
