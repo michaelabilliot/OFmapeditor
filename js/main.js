@@ -302,7 +302,7 @@ async function handleGenerateMapClick() {
 
     } catch (error) {
         console.error("Map Generation Failed:", error);
-        await domUtils.showModal('alert', 'Generation Error', `Failed to generate map: ${error.message}`);
+        await domUtils.showModal('alert', 'Generation Error', `Tool not developed yet :C: ${error.message}`);
         domUtils.updateStatus(`Map generation failed: ${error.message}`, true);
         // Ensure state reflects failure - potentially reset map image etc. if needed
         // The 'finally' block will handle re-enabling basic controls.
