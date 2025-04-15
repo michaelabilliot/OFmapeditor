@@ -40,7 +40,7 @@
     --panel-width-info: 240px;
     --layout-gap: 10px;
 
-    /* NEW: Navigation Variables */
+    /* Navigation Variables */
     --nav-bg-color: var(--panel-bg-color);
     --nav-border-color: var(--border-color);
     --nav-tab-color: var(--text-color);
@@ -48,10 +48,18 @@
     --nav-tab-active-color: var(--link-color);
     --nav-tab-active-border: var(--link-color);
 
-    /* Flag Editor Layout/Effect Variables (Colors removed) */
+    /* Flag Editor Layout/Effect Variables */
     --fe-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --fe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --fe-fixed-radius: 8px; /* Used for border-radius */
+
+    /* Full Flag Editor Variables */
+    --ffe-bg-color: var(--bg-color);
+    --ffe-text-color: var(--text-color);
+    --ffe-panel-bg: var(--panel-bg-color);
+    --ffe-border-color: var(--border-color);
+    --ffe-preview-bg: var(--input-bg-color);
+    --ffe-gap: 1.5rem;
 }
 
 body.dark-mode {
@@ -92,13 +100,20 @@ body.dark-mode {
      --info-status-color: #ccc;
      --hr-color: #555;
 
-    /* NEW: Dark Mode Navigation Variables */
+    /* Dark Mode Navigation Variables */
     --nav-bg-color: var(--panel-bg-color);
     --nav-border-color: var(--border-color);
     --nav-tab-color: var(--text-color);
     --nav-tab-hover-bg: var(--button-hover-bg-color);
     --nav-tab-active-color: var(--link-color);
     --nav-tab-active-border: var(--link-color);
+
+    /* Dark Mode Full Flag Editor */
+    --ffe-bg-color: var(--bg-color);
+    --ffe-text-color: var(--text-color);
+    --ffe-panel-bg: var(--panel-bg-color);
+    --ffe-border-color: var(--border-color);
+    --ffe-preview-bg: var(--input-bg-color);
 }
 
 /* General Styles */
@@ -127,311 +142,131 @@ body {
     flex-grow: 1;
     width: 100%;
     display: grid;
-    /* Nav, Controls, Top Info Row, Main Content */
-    grid-template-rows: auto auto auto 1fr;
-    grid-template-columns: var(--panel-width-instructions) 1fr var(--panel-width-info);
+    /* *** MODIFIED: Grid rows to accommodate content switching *** */
+    grid-template-rows: auto 1fr; /* Nav, Content Area */
+    grid-template-columns: 1fr; /* Single column */
     gap: var(--layout-gap);
     padding: var(--layout-gap);
     box-sizing: border-box;
     overflow: hidden;
     height: 100%;
-    /* *** MODIFIED: Grid area names *** */
     grid-template-areas:
-        "main-nav   main-nav   main-nav" /* Changed from title */
-        "controls   controls   controls"
-        "instr-top  canvas-top info-top"
-        "instr      canvas     info";
-    /* *** END MODIFICATION *** */
+        "main-nav"
+        "main-content"; /* Single area for view containers */
 }
 
 /* Assign elements to grid areas */
-/* *** MODIFIED: Assign main-nav instead of title *** */
 #main-nav { grid-area: main-nav; }
-/* *** END MODIFICATION *** */
-#controls { grid-area: controls; max-width: none; width: 100%; margin-bottom: 0;}
-#instr-top-container { grid-area: instr-top; }
-#canvas-top-container { grid-area: canvas-top; }
-#info-top-container { grid-area: info-top; }
-#instructions { grid-area: instr; }
-#canvas-container { grid-area: canvas; }
-#info-panel { grid-area: info; }
+/* *** ADDED: Assign view containers to the main content area *** */
+#map-editor-view, #full-flag-editor-view {
+    grid-area: main-content;
+    overflow: hidden; /* Prevent internal scroll */
+    height: 100%; /* Take full height of the grid row */
+}
+
+/* --- Map Editor View Layout (Now inside #map-editor-view) --- */
+#map-editor-view {
+    display: grid; /* Apply the original grid layout here */
+    grid-template-rows: auto auto 1fr; /* Controls, Top Info, Main Row */
+    grid-template-columns: var(--panel-width-instructions) 1fr var(--panel-width-info);
+    gap: var(--layout-gap);
+    grid-template-areas:
+        "controls   controls   controls"
+        "instr-top  canvas-top info-top"
+        "instr      canvas     info";
+}
+
 
 /* --- Adjustments for elements within the Grid --- */
 
-/* *** ADDED: Navigation Bar Styles *** */
+/* Navigation Bar Styles */
 #main-nav {
     display: flex;
-    justify-content: center; /* Center the tabs */
+    justify-content: center;
     gap: 5px;
-    margin-bottom: 5px; /* Space below nav */
     padding-bottom: 5px;
     border-bottom: 1px solid var(--nav-border-color);
 }
-
 .nav-tab {
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent; /* Placeholder for active state */
-    padding: 8px 16px;
-    font-size: 1.1em;
-    font-weight: 500;
-    color: var(--nav-tab-color);
-    cursor: pointer;
+    background: none; border: none; border-bottom: 3px solid transparent;
+    padding: 8px 16px; font-size: 1.1em; font-weight: 500;
+    color: var(--nav-tab-color); cursor: pointer;
     transition: color 0.2s, border-color 0.2s, background-color 0.2s;
-    border-radius: 4px 4px 0 0; /* Slight rounding on top */
+    border-radius: 4px 4px 0 0;
 }
-
-.nav-tab:hover:not(:disabled) {
-    background-color: var(--nav-tab-hover-bg);
-    color: var(--nav-tab-active-color); /* Use active color on hover too */
-}
-
-.nav-tab.active {
-    color: var(--nav-tab-active-color);
-    border-bottom-color: var(--nav-tab-active-border);
-    font-weight: 600;
-}
-
-.nav-tab:disabled {
-    color: var(--nav-tab-color);
-    opacity: var(--disabled-opacity);
-    cursor: not-allowed;
-}
-/* *** END Navigation Bar Styles *** */
+.nav-tab:hover:not(:disabled) { background-color: var(--nav-tab-hover-bg); color: var(--nav-tab-active-color); }
+.nav-tab.active { color: var(--nav-tab-active-color); border-bottom-color: var(--nav-tab-active-border); font-weight: 600; }
+.nav-tab:disabled { color: var(--nav-tab-color); opacity: var(--disabled-opacity); cursor: not-allowed; }
 
 /* Controls Bar */
 #controls {
+    grid-area: controls; /* Assign to grid area within map-editor-view */
     background-color: var(--panel-bg-color);
-    color: var(--text-color);
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    transition: background-color 0.3s, border-color 0.3s;
-    box-sizing: border-box;
-    justify-content: space-between; /* Align groups left and right */
+    color: var(--text-color); padding: 8px 12px; border: 1px solid var(--border-color);
+    border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex;
+    flex-wrap: wrap; gap: 10px; align-items: center; transition: background-color 0.3s, border-color 0.3s;
+    box-sizing: border-box; justify-content: space-between;
 }
-.control-group-left, .control-group-right {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-.control-group { display: flex; align-items: center; gap: 5px; } /* Keep for internal spacing if needed */
-
+.control-group-left, .control-group-right { display: flex; gap: 10px; align-items: center; }
+.control-group { display: flex; align-items: center; gap: 5px; }
 input[type="file"].visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
 .file-label-button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; display: inline-block; line-height: normal; text-align: center; user-select: none; }
 .file-label-button:hover { background-color: var(--button-hover-bg-color); }
 .file-label-button[data-disabled="true"] { cursor: not-allowed; opacity: var(--disabled-opacity); pointer-events: none; background-color: var(--button-bg-color); }
-
 #controls button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; user-select: none; }
 #controls button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 #controls button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
-
-/* *** ADDED: Distinct Button Styles *** */
-/* Load Map & JSON (Labels acting as buttons) */
-#loadMapLabel, #jsonLoadLabel {
-    background-color: var(--button-primary-bg-color);
-    color: var(--button-primary-text-color);
-    border-color: var(--button-primary-bg-color);
-}
-#loadMapLabel:hover, #jsonLoadLabel:hover {
-    background-color: var(--button-primary-bg-color); /* Keep base color */
-    opacity: 0.9; /* Dim slightly on hover */
-}
-#loadMapLabel[data-disabled="true"], #jsonLoadLabel[data-disabled="true"] {
-    background-color: var(--button-primary-bg-color) !important; /* Keep color when disabled */
-    color: var(--button-primary-text-color) !important;
-    opacity: var(--disabled-opacity); /* Just reduce opacity */
-    border-color: var(--button-primary-bg-color) !important;
-}
-
-/* Load Flags */
-#loadFlagsButton {
-    background-color: var(--button-info-bg-color);
-    color: var(--button-info-text-color);
-    border-color: var(--button-info-bg-color);
-}
-#loadFlagsButton:hover:not(:disabled) {
-    background-color: var(--button-info-bg-color);
-    opacity: 0.9;
-}
-#loadFlagsButton:disabled {
-    background-color: var(--button-info-bg-color) !important;
-    color: var(--button-info-text-color) !important;
-    opacity: var(--disabled-opacity);
-    border-color: var(--button-info-bg-color) !important;
-}
-
-/* Save ZIP */
-#saveButton {
-    background-color: var(--button-secondary-bg-color);
-    color: var(--button-secondary-text-color);
-    border-color: var(--button-secondary-bg-color);
-}
-#saveButton:hover:not(:disabled) {
-    background-color: var(--button-secondary-bg-color);
-    opacity: 0.9;
-}
-#saveButton:disabled {
-    background-color: var(--button-secondary-bg-color) !important;
-    color: var(--button-secondary-text-color) !important;
-    opacity: var(--disabled-opacity);
-    border-color: var(--button-secondary-bg-color) !important;
-}
-/* *** END Distinct Button Styles *** */
+/* Distinct Button Styles */
+#loadMapLabel, #jsonLoadLabel { background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); border-color: var(--button-primary-bg-color); }
+#loadMapLabel:hover, #jsonLoadLabel:hover { background-color: var(--button-primary-bg-color); opacity: 0.9; }
+#loadMapLabel[data-disabled="true"], #jsonLoadLabel[data-disabled="true"] { background-color: var(--button-primary-bg-color) !important; color: var(--button-primary-text-color) !important; opacity: var(--disabled-opacity); border-color: var(--button-primary-bg-color) !important; }
+#loadFlagsButton { background-color: var(--button-info-bg-color); color: var(--button-info-text-color); border-color: var(--button-info-bg-color); }
+#loadFlagsButton:hover:not(:disabled) { background-color: var(--button-info-bg-color); opacity: 0.9; }
+#loadFlagsButton:disabled { background-color: var(--button-info-bg-color) !important; color: var(--button-info-text-color) !important; opacity: var(--disabled-opacity); border-color: var(--button-info-bg-color) !important; }
+#saveButton { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
+#saveButton:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9; }
+#saveButton:disabled { background-color: var(--button-secondary-bg-color) !important; color: var(--button-secondary-text-color) !important; opacity: var(--disabled-opacity); border-color: var(--button-secondary-bg-color) !important; }
 
 
-/* Status & Coordinate Display & Zoom (New Top Row) */
-#instr-top-container,
-#canvas-top-container,
-#info-top-container {
-    display: flex;
-    align-items: center; /* Vertically center content */
-    font-size: 0.9em;
-    box-sizing: border-box;
-    min-height: 2em; /* Ensure consistent height */
-    padding: 0 5px; /* Add slight horizontal padding */
+/* Status & Coordinate Display & Zoom (Top Info Row - within map-editor-view) */
+#instr-top-container { grid-area: instr-top; }
+#canvas-top-container { grid-area: canvas-top; }
+#info-top-container { grid-area: info-top; }
+#instr-top-container, #canvas-top-container, #info-top-container {
+    display: flex; align-items: center; font-size: 0.9em; box-sizing: border-box;
+    min-height: 2em; padding: 0 5px;
 }
 #instr-top-container { justify-content: flex-start; }
 #canvas-top-container { justify-content: center; }
-#info-top-container { justify-content: flex-end; display: flex; } /* Ensure flex for alignment */
+#info-top-container { justify-content: flex-end; display: flex; }
 
-#coordinateDisplay {
-    background-color: rgba(0,0,0,0.1);
-    padding: 3px 8px;
-    border-radius: 4px;
-    min-width: 130px;
-    text-align: right;
-    font-family: monospace;
-    white-space: nowrap;
-    user-select: none;
-}
+#coordinateDisplay { background-color: rgba(0,0,0,0.1); padding: 3px 8px; border-radius: 4px; min-width: 130px; text-align: right; font-family: monospace; white-space: nowrap; user-select: none; }
 body.dark-mode #coordinateDisplay { background-color: rgba(255,255,255,0.1); }
-
-#status {
-    font-weight: bold;
-    color: var(--text-color);
-    min-height: 1.2em;
-    text-align: center;
-    padding: 3px 8px;
-    border-radius: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+#status { font-weight: bold; color: var(--text-color); min-height: 1.2em; text-align: center; padding: 3px 8px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #status.error { color: var(--status-error-color); background-color: rgba(255, 0, 0, 0.1); }
 body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
-
-#zoomControlsContainer {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background-color: rgba(0,0,0,0.1);
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-left: auto; /* Push to the right within the flex container */
-}
+#zoomControlsContainer { display: flex; align-items: center; gap: 5px; background-color: rgba(0,0,0,0.1); padding: 3px 8px; border-radius: 4px; margin-left: auto; }
 body.dark-mode #zoomControlsContainer { background-color: rgba(255,255,255,0.1); }
-
-#zoomControlsContainer button {
-    padding: 2px 6px;
-    border: 1px solid var(--border-color);
-    border-radius: 3px;
-    background-color: var(--button-bg-color);
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 0.9em;
-    user-select: none;
-    min-width: 20px;
-    font-weight: bold;
-    line-height: normal;
-}
+#zoomControlsContainer button { padding: 2px 6px; border: 1px solid var(--border-color); border-radius: 3px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; user-select: none; min-width: 20px; font-weight: bold; line-height: normal; }
 #zoomControlsContainer button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 #zoomControlsContainer button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
-
-#zoomControlsContainer #zoomDisplay {
-    font-size: 1em;
-    min-width: 45px;
-    text-align: center;
-    background-color: rgba(0,0,0,0.05);
-    padding: 2px 5px;
-    border-radius: 3px;
-    font-family: monospace;
-    user-select: none;
-    color: var(--text-color);
-}
+#zoomControlsContainer #zoomDisplay { font-size: 1em; min-width: 45px; text-align: center; background-color: rgba(0,0,0,0.05); padding: 2px 5px; border-radius: 3px; font-family: monospace; user-select: none; color: var(--text-color); }
 body.dark-mode #zoomControlsContainer #zoomDisplay { background-color: rgba(255,255,255,0.1); }
 
 
-/* Instructions Panel */
-#instructions {
-    font-size: 0.85em;
-    color: var(--text-color);
-    background-color: var(--panel-bg-color);
-    border: 1px solid var(--border-color);
-    padding: 10px 12px;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    text-align: left;
-    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    overflow-y: auto;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-}
+/* Instructions Panel (within map-editor-view) */
+#instructions { grid-area: instr; font-size: 0.85em; color: var(--text-color); background-color: var(--panel-bg-color); border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: left; transition: background-color 0.3s, border-color 0.3s, color 0.3s; overflow-y: auto; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 #instructions h3 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
 #instructions ul { padding-left: 15px; margin-top: 5px; margin-bottom: 10px; }
 #instructions li { margin-bottom: 4px; }
 .highlight { font-weight: bold; color: var(--highlight-color); }
 
-/* Canvas Container */
-#canvas-container {
-    background-color: var(--input-bg-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-    position: relative;
-    min-width: 100px;
-    min-height: 200px;
-    height: 100%;
-    box-sizing: border-box;
-}
-#mapCanvas {
-    display: block;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: -webkit-crisp-edges;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    max-width: 100%;
-    max-height: 100%;
-    outline: none;
-}
+/* Canvas Container (within map-editor-view) */
+#canvas-container { grid-area: canvas; background-color: var(--input-bg-color); display: flex; justify-content: center; align-items: center; border: 1px solid var(--border-color); overflow: hidden; position: relative; min-width: 100px; min-height: 200px; height: 100%; box-sizing: border-box; }
+#mapCanvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; max-width: 100%; max-height: 100%; outline: none; }
 
-/* Info Panel */
-#info-panel {
-    font-size: 0.9em;
-    color: var(--text-color);
-    background-color: var(--panel-bg-color);
-    border: 1px solid var(--border-color);
-    padding: 0 12px 10px 12px;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    text-align: left;
-    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+/* Info Panel (within map-editor-view) */
+#info-panel { grid-area: info; font-size: 0.9em; color: var(--text-color); background-color: var(--panel-bg-color); border: 1px solid var(--border-color); padding: 0 12px 10px 12px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: left; transition: background-color 0.3s, border-color 0.3s, color 0.3s; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
 #info-panel h3 { margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
 #info-content { flex-shrink: 0; margin-bottom: 10px; overflow-y: auto; }
 #info-panel p { margin: 8px 0; word-wrap: break-word; }
@@ -439,8 +274,6 @@ body.dark-mode #zoomControlsContainer #zoomDisplay { background-color: rgba(255,
 #info-panel span#info-name, #info-panel span#info-strength { color: var(--link-color); font-weight: bold; }
 #info-panel hr { border: none; border-top: 1px solid var(--hr-color); margin: 10px 0; flex-shrink: 0; }
 #info-panel h4 { margin: 10px 0 5px 0; font-size: 1em; flex-shrink: 0; }
-
-/* Info Panel Flag Styles */
 #info-flag-container { margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
 #info-flag-preview { max-width: 150px; max-height: 150px; width: auto; height: auto; border: 1px solid var(--info-flag-border); background-color: var(--info-flag-bg); object-fit: contain; display: none; }
 #info-flag-status { font-size: 0.85em; color: var(--info-status-color); font-style: italic; text-align: center; display: none; word-break: break-all; padding: 5px; background-color: var(--info-flag-bg); border: 1px dashed var(--info-flag-border); border-radius: 4px; width: 90%; box-sizing: border-box; }
@@ -449,44 +282,11 @@ body.dark-mode #zoomControlsContainer #zoomDisplay { background-color: rgba(255,
 #info-flag-remove-button { padding: 5px 8px; font-size: 0.85em; background-color: var(--button-danger-bg-color); color: var(--button-danger-text-color); border: none; border-radius: 4px; cursor: pointer; line-height: normal; flex-shrink: 0; }
 #info-flag-remove-button:hover:not(:disabled) { opacity: 0.9; }
 #info-flag-remove-button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
-.btn-secondary-small {
-    padding: 5px 8px;
-    font-size: 0.85em;
-    background-color: var(--button-secondary-bg-color);
-    color: var(--button-secondary-text-color);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    line-height: normal;
-    flex-shrink: 0;
-    text-align: center;
-    user-select: none;
-    transition: background-color 0.2s, opacity 0.2s;
-}
+.btn-secondary-small { padding: 5px 8px; font-size: 0.85em; background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border: none; border-radius: 4px; cursor: pointer; line-height: normal; flex-shrink: 0; text-align: center; user-select: none; transition: background-color 0.2s, opacity 0.2s; }
 .btn-secondary-small:hover:not(:disabled) { opacity: 0.9; background-color: var(--button-secondary-bg-color); }
 .btn-secondary-small:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); background-color: var(--button-secondary-bg-color); }
-#editFlagButton {
-    flex-basis: calc(50% - 4px);
-    max-width: 150px;
-    padding: 8px 12px;
-    font-size: 0.9em;
-}
-
-
-/* Nation List (within Info Panel) */
-#nationListContainer {
-    width: 100%;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    background-color: var(--input-bg-color);
-    padding: 8px;
-    border-radius: 5px;
-    margin-top: 0;
-    box-sizing: border-box;
-    flex-grow: 1;
-    min-height: 50px;
-    transition: background-color 0.3s, border-color 0.3s;
-}
+#editFlagButton { flex-basis: calc(50% - 4px); max-width: 150px; padding: 8px 12px; font-size: 0.9em; }
+#nationListContainer { width: 100%; overflow-y: auto; border: 1px solid var(--border-color); background-color: var(--input-bg-color); padding: 8px; border-radius: 5px; margin-top: 0; box-sizing: border-box; flex-grow: 1; min-height: 50px; transition: background-color 0.3s, border-color 0.3s; }
 body.dark-mode #nationListContainer { background-color: var(--input-bg-color); }
 #nationList { list-style: none; padding-left: 0; margin: 0; color: var(--text-color); }
 #nationList li { margin-bottom: 5px; font-size: 0.9em; padding: 4px 6px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; cursor: pointer; user-select: none; }
@@ -545,29 +345,32 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* Media Queries */
 @media (max-width: 800px) {
     #main-container {
+        /* Nav, Content Area */
+        grid-template-rows: auto 1fr;
         grid-template-columns: 1fr; /* Single column */
-        /* Nav, Controls, TopRow1(instr-top), TopRow2(canvas-top), TopRow3(info-top), InstrPanel, Canvas, InfoPanel */
-        grid-template-rows: auto auto auto auto auto auto 1fr auto;
         grid-template-areas:
-            "main-nav"   /* Nav on its own row */
-            "controls"
-            "instr-top"
-            "canvas-top"
-            "info-top"
-            "instr"
-            "canvas"
-            "info";
+            "main-nav"
+            "main-content";
+        overflow-y: auto; /* Allow scrolling on main container */
+        height: auto; /* Let height be determined by content */
+    }
+    /* Make map editor view scrollable on mobile if needed */
+    #map-editor-view {
+        display: flex; /* Switch to flex for simpler stacking */
+        flex-direction: column;
+        height: auto; /* Allow height to grow */
+        overflow-y: visible; /* Allow internal scroll if needed */
     }
      body { height: auto; }
 
+    /* Revert panels to auto height on mobile, grid handles overall structure */
     #instructions, #info-panel {
-        height: 250px;
-        width: 100%;
-        min-height: 150px;
+        height: auto;
+        min-height: 150px; /* Keep minimum */
     }
     #canvas-container {
-        min-height: 40vh;
-        width: 100%;
+        min-height: 40vh; /* Keep minimum */
+        height: auto; /* Allow to shrink */
     }
      #settingsPanel {
         width: 90%;
@@ -577,269 +380,226 @@ input:checked + .slider:before { transform: translateX(20px); }
      #info-flag-upload-label, #editFlagButton { flex-basis: 100%; max-width: none; }
      #info-flag-remove-button { flex-basis: auto; }
 
-     /* Adjust top row alignment on mobile */
+     /* Adjust top row for stacking */
+     #map-editor-view {
+         grid-template-rows: auto auto auto auto auto 1fr auto; /* Stacking rows */
+         grid-template-columns: 1fr;
+         grid-template-areas:
+            "controls"
+            "instr-top"
+            "canvas-top"
+            "info-top"
+            "instr"
+            "canvas"
+            "info";
+     }
      #instr-top-container,
      #canvas-top-container,
      #info-top-container {
-         justify-content: center; /* Center all top elements */
-         padding: 3px 5px; /* Consistent padding */
-         min-height: 1.8em; /* Adjust min height */
-         text-align: center; /* Center text within */
-         width: 100%; /* Ensure they take full width */
+         justify-content: center; padding: 3px 5px; min-height: 1.8em;
+         text-align: center; width: 100%;
      }
      #coordinateDisplay { min-width: auto; text-align: center;}
-     #zoomControlsContainer { justify-content: center; }
-     #status { width: 90%; } /* Prevent status taking full width and allow centering */
+     #zoomControlsContainer { justify-content: center; margin-left: 0; } /* Remove margin */
+     #status { width: 90%; }
 
-     /* Adjust controls bar alignment on mobile */
      #controls { justify-content: center; } /* Center groups on mobile */
-     .control-group-left, .control-group-right { justify-content: center; }
+     .control-group-left, .control-group-right { justify-content: center; flex-wrap: wrap; }
+
+     /* Ensure full flag editor takes space */
+     #full-flag-editor-view { height: auto; }
 }
 
-/* ------------- Flag Editor Styles (Using Main App Variables) ------------- */
 
-#flagEditorModalContainer {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--modal-overlay-bg);
-    z-index: 3000;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    box-sizing: border-box;
-}
-
-#flagEditorModalContent {
-    background-color: var(--panel-bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--fe-fixed-radius, 8px);
-    box-shadow: var(--fe-shadow-lg);
-    padding: 1.5rem;
-    max-width: 1100px;
-    width: 95vw;
-    max-height: 90vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
-/* --- Base Styles (Scoped) --- */
-#flagEditorModalContainer * {
-    margin: 0; padding: 0; box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-}
-
-/* --- Header (Scoped) --- */
-#flagEditorModalContainer h1 {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-    color: var(--link-color);
-    text-align: center;
-}
-#flagEditorModalContainer .fe-subheading {
-    color: var(--text-color);
-    opacity: 0.8;
-    font-size: 0.9rem;
-    max-width: 700px;
-    margin: 0 auto 1.5rem auto;
-    text-align: center;
-}
-
-/* --- Buttons (Scoped & Using Main Vars) --- */
-#flagEditorModalContainer .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    background-color: var(--button-primary-bg-color);
-    color: var(--button-primary-text-color);
-    padding: 0.6rem 1.2rem;
-    border-radius: var(--fe-fixed-radius, 6px);
-    border: 1px solid transparent;
-    font-size: 0.9rem; font-weight: 600; cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    box-shadow: var(--fe-shadow);
-    text-decoration: none; white-space: nowrap;
-}
-#flagEditorModalContainer .btn:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px); box-shadow: var(--fe-shadow-lg);
-}
+/* ------------- Flag Editor Modal Styles ------------- */
+/* Styles remain largely the same, reusing variables */
+#flagEditorModalContainer { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--modal-overlay-bg); z-index: 3000; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+#flagEditorModalContent { background-color: var(--panel-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: var(--fe-fixed-radius, 8px); box-shadow: var(--fe-shadow-lg); padding: 1.5rem; max-width: 1100px; width: 95vw; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; box-sizing: border-box; }
+#flagEditorModalContainer * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
+#flagEditorModalContainer h1 { font-size: 1.8rem; margin-bottom: 0.5rem; font-weight: 700; color: var(--link-color); text-align: center; }
+#flagEditorModalContainer .fe-subheading { color: var(--text-color); opacity: 0.8; font-size: 0.9rem; max-width: 700px; margin: 0 auto 1.5rem auto; text-align: center; }
+#flagEditorModalContainer .btn { display: inline-flex; align-items: center; justify-content: center; background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); padding: 0.6rem 1.2rem; border-radius: var(--fe-fixed-radius, 6px); border: 1px solid transparent; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease; box-shadow: var(--fe-shadow); text-decoration: none; white-space: nowrap; }
+#flagEditorModalContainer .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: var(--fe-shadow-lg); }
 #flagEditorModalContainer .btn:active:not(:disabled) { transform: translateY(0px); box-shadow: var(--fe-shadow); }
-#flagEditorModalContainer .btn:disabled {
-    background-color: var(--button-bg-color) !important;
-    color: var(--text-color) !important;
-    opacity: var(--disabled-opacity) !important;
-    cursor: not-allowed !important; box-shadow: none !important;
-    transform: none !important;
-    border-color: var(--border-color) !important;
-}
-#flagEditorModalContainer .btn-secondary {
-    background-color: var(--button-secondary-bg-color);
-    color: var(--button-secondary-text-color);
-    border-color: var(--button-secondary-bg-color);
-}
+#flagEditorModalContainer .btn:disabled { background-color: var(--button-bg-color) !important; color: var(--text-color) !important; opacity: var(--disabled-opacity) !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; border-color: var(--border-color) !important; }
+#flagEditorModalContainer .btn-secondary { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
 #flagEditorModalContainer .btn-secondary:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9; }
-#flagEditorModalContainer .btn-danger {
-    background-color: var(--button-danger-bg-color);
-    color: var(--button-danger-text-color);
-    border-color: var(--button-danger-bg-color);
-}
+#flagEditorModalContainer .btn-danger { background-color: var(--button-danger-bg-color); color: var(--button-danger-text-color); border-color: var(--button-danger-bg-color); }
 #flagEditorModalContainer .btn-danger:hover:not(:disabled) { background-color: var(--button-danger-bg-color); opacity: 0.9; }
-
-/* --- Progress Bar (Scoped & Using Main Vars) --- */
-#flagEditorModalContainer .progress-container { margin: 1.5rem 0; display: none; text-align: left; }
-#flagEditorModalContainer .progress-label { font-size: 0.9rem; color: var(--text-color); opacity: 0.8; margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
-#flagEditorModalContainer .progress-bar { height: 8px; background-color: var(--input-bg-color); border: 1px solid var(--input-border-color); border-radius: 4px; overflow: hidden; }
-#flagEditorModalContainer .progress { height: 100%; background-color: var(--link-color); width: 0%; transition: width 0.4s ease; border-radius: 4px; }
-#flagEditorModalContainer .completion-message { display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-color); font-weight: 600; font-size: 1rem; margin-top: 0.5rem; }
-#flagEditorModalContainer .checkmark { color: var(--link-color); font-size: 1.2rem; }
-
-/* --- Options Panel (Scoped & Using Main Vars) --- */
-#flagEditorModalContainer .options-panel {
-    background-color: var(--panel-bg-color);
-    border-radius: var(--fe-fixed-radius, 8px);
-    box-shadow: var(--fe-shadow);
-    padding: 1.5rem; margin-bottom: 1.5rem;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;
-    border: 1px solid var(--border-color);
-}
+#flagEditorModalContainer .options-panel { background-color: var(--panel-bg-color); border-radius: var(--fe-fixed-radius, 8px); box-shadow: var(--fe-shadow); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; border: 1px solid var(--border-color); }
 #flagEditorModalContainer .option-group { display: flex; align-items: center; gap: 0.75rem; min-height: 38px; }
 #flagEditorModalContainer .option-label { color: var(--text-color); opacity: 0.9; font-weight: 500; font-size: 0.95rem; white-space: nowrap; }
-
-/* Select Dropdown (Scoped & Using Main Vars) */
-#flagEditorModalContainer .select {
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--fe-fixed-radius, 6px);
-    padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    -webkit-appearance: none; appearance: none;
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Default gray */
-    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
-    padding-right: 2.5rem; min-height: 38px;
-}
-body.dark-mode #flagEditorModalContainer .select {
-     background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Lighter gray for dark */
-}
+#flagEditorModalContainer .select { background-color: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: var(--fe-fixed-radius, 6px); padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em; padding-right: 2.5rem; min-height: 38px; }
+body.dark-mode #flagEditorModalContainer .select { background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); }
 #flagEditorModalContainer .select:hover { border-color: var(--link-color); }
 #flagEditorModalContainer .select:focus { outline: none; border-color: var(--link-color); box-shadow: 0 0 0 2px var(--link-color); }
-/* Apply select styles specifically to the preprocess dropdown too */
-#flagEditorModalContainer #fe-preprocessModeSelect {
-    background-color: var(--input-bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--fe-fixed-radius, 6px);
-    padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    -webkit-appearance: none; appearance: none;
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
-    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
-    padding-right: 2.5rem; min-height: 38px;
-}
-body.dark-mode #flagEditorModalContainer #fe-preprocessModeSelect {
-     background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
-}
+#flagEditorModalContainer #fe-preprocessModeSelect { background-color: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: var(--fe-fixed-radius, 6px); padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em; padding-right: 2.5rem; min-height: 38px; }
+body.dark-mode #flagEditorModalContainer #fe-preprocessModeSelect { background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); }
 #flagEditorModalContainer #fe-preprocessModeSelect:hover { border-color: var(--link-color); }
 #flagEditorModalContainer #fe-preprocessModeSelect:focus { outline: none; border-color: var(--link-color); box-shadow: 0 0 0 2px var(--link-color); }
-
-/* --- Images Container (Scoped & Using Main Vars) --- */
 #flagEditorModalContainer .images-container { display: block; margin-bottom: 1.5rem; background-color: transparent; padding: 0; border-radius: 0; box-shadow: none; }
 #flagEditorModalContainer .split-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-#flagEditorModalContainer .panel {
-    background-color: var(--bg-color);
-    border: 1px solid var(--border-color);
-    padding: 0.75rem; border-radius: var(--fe-fixed-radius, 8px);
-    display: flex; flex-direction: column; min-height: 250px;
-}
+#flagEditorModalContainer .panel { background-color: var(--bg-color); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: var(--fe-fixed-radius, 8px); display: flex; flex-direction: column; min-height: 250px; }
 #flagEditorModalContainer .panel-title { font-size: 0.9rem; color: var(--text-color); opacity: 0.8; margin-bottom: 0.5rem; font-weight: 500; text-align: center; }
 #flagEditorModalContainer .image-preview { flex-grow: 1; display: flex; align-items: center; justify-content: center; background-color: var(--input-bg-color); border-radius: var(--fe-fixed-radius, 6px); overflow: hidden; min-height: 200px; border: 1px solid var(--border-color); }
 #flagEditorModalContainer .preview-image { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
-
-/* --- Manual Crop Button (Scoped & Using Main Vars) --- */
 #flagEditorModalContainer #fe-manualCropControls { text-align: center; margin: 0.5rem 0 1rem 0; }
 #flagEditorModalContainer #fe-manualCropStatus { font-size: 0.85rem; color: var(--text-color); opacity: 0.7; margin-left: 1em; }
 #flagEditorModalContainer #fe-defineCropBtn { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
 #flagEditorModalContainer #fe-defineCropBtn:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9;}
-
-
-/* --- Loading Overlay (Scoped & Using Main Vars) --- */
-#flagEditorModalContainer #fe-loadingOverlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(3px); display: none;
-    flex-direction: column; align-items: center; justify-content: center;
-    z-index: 100; color: var(--text-color);
-    font-size: 1rem; border-radius: var(--fe-fixed-radius, 8px);
-}
-#flagEditorModalContainer .spinner {
-    width: 40px; height: 40px; border-radius: 50%;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--link-color);
-    animation: fe-spin 1s ease-in-out infinite; margin-bottom: 1rem;
-}
+#flagEditorModalContainer #fe-loadingOverlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(3px); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: var(--text-color); font-size: 1rem; border-radius: var(--fe-fixed-radius, 8px); }
+#flagEditorModalContainer .spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--border-color); border-top-color: var(--link-color); animation: fe-spin 1s ease-in-out infinite; margin-bottom: 1rem; }
 #flagEditorModalContainer .loading-text { font-weight: 500; }
 @keyframes fe-spin { to { transform: rotate(360deg); } }
-
-/* --- Crop Modal (Inner Modal, Scoped & Using Main Vars) --- */
-#fe-cropModalInner {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px); z-index: 4000;
-    display: none; align-items: center; justify-content: center; padding: 1rem;
-}
-#fe-cropModalInner .crop-modal-content {
-    background-color: var(--panel-bg-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    padding: 1.5rem; border-radius: var(--fe-fixed-radius, 8px);
-    box-shadow: var(--fe-shadow-lg); max-width: 90vw; max-height: 90vh;
-    display: flex; flex-direction: column;
-}
-#fe-cropModalInner .crop-image-container {
-    width: 100%; max-height: calc(80vh - 100px); overflow: hidden; margin-bottom: 1rem;
-    background-color: var(--input-bg-color);
-    border: 1px solid var(--border-color);
-}
+#fe-cropModalInner { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 4000; display: none; align-items: center; justify-content: center; padding: 1rem; }
+#fe-cropModalInner .crop-modal-content { background-color: var(--panel-bg-color); color: var(--text-color); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--fe-fixed-radius, 8px); box-shadow: var(--fe-shadow-lg); max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; }
+#fe-cropModalInner .crop-image-container { width: 100%; max-height: calc(80vh - 100px); overflow: hidden; margin-bottom: 1rem; background-color: var(--input-bg-color); border: 1px solid var(--border-color); }
 #fe-cropModalInner .crop-image-container img { display: block; max-width: 100%; max-height: 100%; }
 #fe-cropModalInner .crop-modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
-/* Cropper.js specific styles (Using main vars) */
 #fe-cropModalInner .cropper-view-box { outline: 1px solid var(--link-color); opacity: 0.8;}
 #fe-cropModalInner .cropper-face { background-color: var(--link-color); opacity: 0.1; }
 #fe-cropModalInner .cropper-dashed { border-color: var(--border-color) !important; opacity: 0.5 !important;}
 #fe-cropModalInner .cropper-point { background-color: var(--link-color) !important; opacity: 0.8 !important; }
 #fe-cropModalInner .cropper-line { background-color: var(--link-color) !important; opacity: 0.8 !important;}
-
-/* --- Final Apply/Cancel Buttons (Scoped & Using Main Vars) --- */
-#flagEditorModalContainer .final-actions {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-}
+#flagEditorModalContainer .final-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem; }
 #flagEditorModalContainer #fe-applyButton { background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); border-color: var(--button-primary-bg-color); }
 #flagEditorModalContainer #fe-cancelButton { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
 #flagEditorModalContainer #fe-applyButton:hover:not(:disabled) { background-color: var(--button-primary-bg-color); opacity: 0.9; }
 #flagEditorModalContainer #fe-cancelButton:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9; }
+@media (max-width: 768px) { #flagEditorModalContainer .options-panel { flex-direction: column; align-items: stretch; gap: 1rem; } #flagEditorModalContainer .option-group { justify-content: space-between; } #fe-cropModalInner .crop-modal-content { padding: 1rem; } #fe-cropModalInner .crop-modal-actions { justify-content: center; } #flagEditorModalContainer .final-actions { justify-content: center; } }
+@media (max-width: 480px) { #flagEditorModalContainer .option-group { flex-direction: column; align-items: flex-start; gap: 0.5rem; } #flagEditorModalContainer .option-label { margin-bottom: 0.25rem; } #fe-cropModalInner .crop-modal-actions .btn { width: 100%; justify-content: center; } #fe-cropModalInner .crop-modal-actions { flex-direction: column; } #flagEditorModalContainer .final-actions { flex-direction: column; } #flagEditorModalContainer .final-actions .btn { width: 100%; } }
 
 
-/* Responsive adjustments for Flag Editor Modal Content */
-@media (max-width: 768px) {
-    #flagEditorModalContainer .options-panel { flex-direction: column; align-items: stretch; gap: 1rem; }
-    #flagEditorModalContainer .option-group { justify-content: space-between; }
-    #fe-cropModalInner .crop-modal-content { padding: 1rem; }
-    #fe-cropModalInner .crop-modal-actions { justify-content: center; }
-    #flagEditorModalContainer .final-actions { justify-content: center; }
+/* ------------- Full Flag Editor View Styles ------------- */
+#full-flag-editor-view {
+    display: flex; /* Use flex for main layout */
+    flex-direction: column; /* Stack controls and previews vertically */
+    gap: var(--ffe-gap);
+    padding: var(--layout-gap); /* Use main layout gap for consistency */
+    background-color: var(--ffe-bg-color);
+    color: var(--ffe-text-color);
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto; /* Allow scrolling if content overflows */
 }
- @media (max-width: 480px) {
-    #flagEditorModalContainer .option-group { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-    #flagEditorModalContainer .option-label { margin-bottom: 0.25rem; }
-    #fe-cropModalInner .crop-modal-actions .btn { width: 100%; justify-content: center; }
-    #fe-cropModalInner .crop-modal-actions { flex-direction: column; }
-    #flagEditorModalContainer .final-actions { flex-direction: column; }
-    #flagEditorModalContainer .final-actions .btn { width: 100%; }
- }
+
+.ffe-controls-container {
+    background-color: var(--ffe-panel-bg);
+    padding: var(--ffe-gap);
+    border-radius: var(--fe-fixed-radius);
+    border: 1px solid var(--ffe-border-color);
+    box-shadow: var(--fe-shadow);
+    flex-shrink: 0; /* Prevent controls from shrinking */
+}
+
+.ffe-controls-container h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    color: var(--link-color);
+}
+.ffe-controls-container p {
+    text-align: center;
+    margin-bottom: 1.5em;
+    opacity: 0.8;
+}
+
+.ffe-options-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ffe-gap);
+    justify-content: center; /* Center option groups */
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.ffe-option-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.ffe-option-label {
+    font-weight: 500;
+    white-space: nowrap;
+}
+/* Reuse select styles from modal editor if defined globally */
+#full-flag-editor-view .select {
+    background-color: var(--input-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: var(--fe-fixed-radius, 6px); padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; -webkit-appearance: none; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em; padding-right: 2.5rem; min-height: 38px;
+}
+body.dark-mode #full-flag-editor-view .select { background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); }
+#full-flag-editor-view .select:hover { border-color: var(--link-color); }
+#full-flag-editor-view .select:focus { outline: none; border-color: var(--link-color); box-shadow: 0 0 0 2px var(--link-color); }
+
+/* Reuse file label button styles */
+#full-flag-editor-view .file-label-button {
+    padding: 0.6rem 1.2rem; border: 1px solid var(--border-color); border-radius: var(--fe-fixed-radius, 6px); background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9rem; font-weight: 600; display: inline-block; line-height: normal; text-align: center; user-select: none; box-shadow: var(--fe-shadow);
+}
+#full-flag-editor-view .file-label-button:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: var(--fe-shadow-lg); }
+
+/* Reuse main button styles */
+#full-flag-editor-view .btn {
+     display: inline-flex; align-items: center; justify-content: center; background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); padding: 0.6rem 1.2rem; border-radius: var(--fe-fixed-radius, 6px); border: 1px solid transparent; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease; box-shadow: var(--fe-shadow); text-decoration: none; white-space: nowrap; border-color: var(--button-secondary-bg-color);
+}
+#full-flag-editor-view .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: var(--fe-shadow-lg); }
+#full-flag-editor-view .btn:disabled { background-color: var(--button-bg-color) !important; color: var(--text-color) !important; opacity: var(--disabled-opacity) !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; border-color: var(--border-color) !important; }
+
+
+.ffe-status {
+    text-align: center;
+    margin-top: 1em;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.ffe-previews-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
+    gap: var(--ffe-gap);
+    flex-grow: 1; /* Allow previews to take remaining space */
+    min-height: 300px; /* Ensure previews have some minimum height */
+}
+
+.ffe-panel {
+    background-color: var(--ffe-panel-bg);
+    border: 1px solid var(--ffe-border-color);
+    padding: 1rem;
+    border-radius: var(--fe-fixed-radius);
+    box-shadow: var(--fe-shadow);
+    display: flex;
+    flex-direction: column;
+}
+.ffe-panel-title {
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 0.75rem;
+    opacity: 0.9;
+}
+.ffe-image-preview {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--ffe-preview-bg);
+    border-radius: calc(var(--fe-fixed-radius) - 4px); /* Slightly smaller radius */
+    overflow: hidden;
+    min-height: 200px;
+    border: 1px solid var(--ffe-border-color); /* Inner border */
+}
+.ffe-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+@media (max-width: 768px) {
+     #full-flag-editor-view .ffe-options-panel {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+     }
+     #full-flag-editor-view .ffe-option-group {
+        justify-content: space-between;
+     }
+}

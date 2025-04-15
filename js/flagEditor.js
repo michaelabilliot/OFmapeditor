@@ -42,7 +42,8 @@ function showFeLoading(show, text = "Processing...") {
     feLoadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
-function loadImage(url) {
+// --- FIX: Added 'export' keyword ---
+export function loadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -54,8 +55,9 @@ function loadImage(url) {
         img.src = url;
     });
 }
+// --- End Fix ---
 
-// --- FIX: Added 'export' keyword ---
+// Exported as requested before
 export function svgStringToDataURL(svgString) {
     try {
         // Ensure UTF-8 characters are handled correctly before base64 encoding
@@ -66,7 +68,7 @@ export function svgStringToDataURL(svgString) {
         return null;
     }
 }
-// --- End Fix ---
+
 
 function resetFeState() {
     feState = {
@@ -113,7 +115,7 @@ export function initFlagEditor() {
     modalContent.id = 'flagEditorModalContent';
     modalContent.style.boxSizing = 'border-box';
     modalContent.innerHTML = `
-        <h1>Flag Standardizer (By N0ur)</h1>
+        <h1>Flag Standardizer</h1>
         <p class="fe-subheading">
             Adjust pre-processing, aspect ratio, and scaling for the selected flag.
         </p>
@@ -171,7 +173,7 @@ export function initFlagEditor() {
                     </svg>
                     Define Crop Area
                 </button>
-                 <span id="fe-manualCropStatus" style="font-size: 0.85rem; color: var(--text-color); opacity: 0.7; margin-left: 1em;"></span> {/* Adjusted text color */}
+                 <span id="fe-manualCropStatus" style="font-size: 0.85rem; color: var(--text-color); opacity: 0.7; margin-left: 1em;"></span>
             </div>
         </div>
 
@@ -943,7 +945,7 @@ async function processImageTransformation() {
      }
  }
 
-// --- NEW Exported function for AUTOMATIC standardization ---
+// --- Exported function for AUTOMATIC standardization ---
 /**
  * Standardizes a flag image based on provided data and options, independent of the modal UI.
  * @param {string} sourceData - The original flag data (DataURL or SVG string).
@@ -970,7 +972,7 @@ export async function standardizeFlag(sourceData, sourceType, sourceWidth, sourc
     let initialImage;
     try {
         // Load the initial image (DataURL) into an Image object
-        initialImage = await loadImage(initialImageUrl);
+        initialImage = await loadImage(initialImageUrl); // Use exported function
         if (!initialImage.naturalWidth || !initialImage.naturalHeight) {
              // Use provided dimensions if natural dimensions fail (e.g., SVG issues)
              console.warn(`StandardizeFlag: Loaded image has zero dimensions. Using provided ${sourceWidth}x${sourceHeight}`);
