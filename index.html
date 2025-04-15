@@ -25,14 +25,12 @@
         <!-- Navigation Bar -->
         <div id="main-nav">
             <button id="nav-map-editor" class="nav-tab active" aria-current="page">Map Editor</button>
-            <!-- *** MODIFIED: Enable Flag Editor Tab (remove disabled attribute later) *** -->
             <button id="nav-flag-editor" class="nav-tab">Flag Editor</button>
         </div>
 
-        <!-- *** ADDED: Container for Map Editor View *** -->
+        <!-- Container for Map Editor View -->
         <div id="map-editor-view">
             <div id="controls"> <!-- Populated by JS --> </div>
-
             <div id="instr-top-container">
                  <div id="coordinateDisplay">X: ---, Y: ---</div>
             </div>
@@ -47,15 +45,11 @@
                      <button id="zoomResetButton" title="Reset View (0)">Reset</button>
                 </div>
             </div>
-
-            <!-- Main Editor Area (Instructions, Canvas, Info Panel) -->
                 <div id="instructions"> <!-- Populated by JS --> </div>
-
                 <div id="canvas-container">
-                    <canvas id="mapCanvas" tabindex="0"> <!-- Added tabindex to allow focus -->
+                    <canvas id="mapCanvas" tabindex="0">
                         Your browser does not support the HTML5 canvas element.
                     </canvas>
-                     <!-- Inline Editor Panel (Positioned over canvas) -->
                      <div id="inlineEditPanel">
                          <label for="inlineEditName">Name:</label>
                          <input type="text" id="inlineEditName">
@@ -67,11 +61,9 @@
                          </div>
                      </div>
                 </div>
-
                 <div id="info-panel">
                      <h3>Nation Info</h3>
                      <div id="info-content">
-                         <!-- Flag Section -->
                          <div id="info-flag-container">
                              <img id="info-flag-preview" src="#" alt="Nation Flag Preview">
                              <p id="info-flag-status">Flag status placeholder</p>
@@ -82,25 +74,23 @@
                                  <button id="editFlagButton" class="btn-secondary-small" disabled title="Edit flag appearance">Flag Editor</button>
                              </div>
                          </div>
-                         <!-- Nation Details -->
                          <p><strong>Name:</strong> <span id="info-name">--</span></p>
                          <p><strong>Strength:</strong> <span id="info-strength">--</span></p>
                          <p id="info-placeholder"><small><i>Select a nation on the map or list to see details.</i></small></p>
                      </div>
                      <hr>
-                     <!-- Nation List Section -->
                      <h4>Nation List (<span id="nationListCount">0</span>)</h4>
                      <div id="nationListContainer">
-                        <ul id="nationList">
-                            <!-- List items populated by JS -->
-                        </ul>
+                        <ul id="nationList"> <!-- List items populated by JS --> </ul>
                      </div>
                  </div>
         </div> <!-- End of map-editor-view -->
 
-        <!-- *** ADDED: Container for Full Flag Editor View (Initially Hidden) *** -->
+        <!-- Container for Full Flag Editor View (Initially Hidden) -->
         <div id="full-flag-editor-view" style="display: none;">
              <!-- Content populated by fullFlagEditor.js -->
+             <!-- Structure will be built by JS, adding a basic placeholder -->
+             Loading Full Flag Editor...
         </div>
 
     </div> <!-- End of main-container -->
@@ -122,7 +112,7 @@
         </div>
     </div>
 
-    <!-- Flag Editor Modal Placeholder (Hidden by default) -->
+    <!-- Flag Editor Modal Placeholder (Hidden by default - for Map Editor) -->
     <div id="flagEditorModalContainer" class="flag-editor-modal-overlay">
         <!-- Content will be populated by flagEditor.js -->
     </div>
@@ -134,9 +124,8 @@
 
     <!-- Load the main JavaScript modules -->
     <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/flagEditor.js"></script>
-    <!-- *** ADDED: Load Full Flag Editor Module *** -->
-    <script type="module" src="js/fullFlagEditor.js"></script>
+    <script type="module" src="js/flagEditor.js"></script> <!-- Modal editor -->
+    <script type="module" src="js/fullFlagEditor.js"></script> <!-- Full page editor -->
 
 </body>
 </html>
