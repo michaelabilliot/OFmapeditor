@@ -2,6 +2,8 @@ import * as cfg from './config.js';
 import { updateStatus, showModal, updateNationList, updateInfoPanel, closeInlineEditor } from './domUtils.js';
 import { redrawCanvas, resetView } from './canvasUtils.js';
 import { generateFlagName } from './nationUtils.js'; // Need this helper
+// Import standardizeFlag and the necessary svgStringToDataURL helper
+import { standardizeFlag, svgStringToDataURL } from './flagEditor.js';
 
 // --- Helper ---
 function getBase64FromDataUrl(dataUrl) {
@@ -15,19 +17,15 @@ function getBase64FromDataUrl(dataUrl) {
 
 // --- Flag Handling ---
 /**
- * Processes a flag file (SVG or raster), creating a pre-rendered bitmap
- * version for efficient canvas drawing, while storing the original data
- * for saving. Handles resizing and stores metadata.
+ * Processes a flag file (SVG or raster), creating a standardized bitmap version
+ * for efficient canvas drawing, while storing the original data for saving/editing.
+ * Handles resizing and stores metadata.
  *
  * @param {File} file - The flag file object.
  * @param {object} nation - The nation object to assign the flag to.
  * @returns {Promise<object>} Promise resolving with status info.
  */
 export async function processAndAssignFlag(file, nation) {
-    // Max dimension for the pre-rendered bitmap used for drawing on canvas.
-    // Original data is saved regardless of this size.
-    const MAX_FLAG_DRAW_DIMENSION = 150;
-
     return new Promise((resolve, reject) => {
         if (!file || !nation) { return reject(new Error("Invalid arguments for processAndAssignFlag")); }
 
@@ -59,86 +57,86 @@ export async function processAndAssignFlag(file, nation) {
                      throw new Error("FileReader failed to read file data.");
                 }
 
-                // Store essential original data
-                nation.flag = flagName; // Assign the generated name (used for saving)
+                // --- 1. Store essential original data ---
+                nation.flag = flagName; // Assign the generated name (used for saving/reference)
                 nation.flagData = originalFileData; // Store ORIGINAL raw data
                 nation.flagDataType = isSvg ? 'svg' : (fileMimeType?.split('/')[1] || fileExt || 'png'); // Store original type ('png', 'jpeg', 'svg', etc.)
 
-                // --- Create an Image object to get dimensions and for drawing ---
+                // --- 2. Create an Image object from the original data to get dimensions ---
                 const originalFlagImage = new Image();
 
-                originalFlagImage.onload = () => {
-                    // Store original dimensions (crucial for saving)
+                originalFlagImage.onload = async () => { // Make this handler async
+                    // Store original dimensions (crucial for saving and standardization)
                     nation.flagWidth = originalFlagImage.naturalWidth;
                     nation.flagHeight = originalFlagImage.naturalHeight;
 
                     if (nation.flagWidth === 0 || nation.flagHeight === 0) {
                         console.warn(`Loaded flag for ${nation.name} but natural dimensions are zero. Check file: ${file.name}`);
-                        // Cannot resize or use effectively, clear drawing image but keep original data
+                        // Cannot standardize or use effectively, clear drawing image but keep original data
                         nation.flagImage = null;
                         return resolve({ status: 'loaded_zero_dims', filename: file.name, nationName: nation.name });
                     }
 
-                    // --- Calculate Resized Dimensions for Canvas Drawing Bitmap ---
-                    let resizeRatio = 1;
-                    if (nation.flagWidth > MAX_FLAG_DRAW_DIMENSION || nation.flagHeight > MAX_FLAG_DRAW_DIMENSION) {
-                        resizeRatio = Math.min(MAX_FLAG_DRAW_DIMENSION / nation.flagWidth, MAX_FLAG_DRAW_DIMENSION / nation.flagHeight);
+                    // --- 3. Perform Automatic Standardization using FlagEditor logic ---
+                    try {
+                        const defaultOptions = {
+                            preprocessMode: 'default', // Default transparency crop
+                            finalScaleMode: 'warp',    // Default stretch/squash
+                            finalWidth: 160,           // Default dimensions
+                            finalHeight: 100,
+                            frameThickness: 5,         // Default frame
+                            fixedCornerRadius: 8       // Default rounding
+                        };
+                        // Call the exported standardization function
+                        const standardizedDataUrl = await standardizeFlag(
+                            nation.flagData,       // Pass the original data
+                            nation.flagDataType,   // Pass the original type
+                            nation.flagWidth,      // Pass original dimensions
+                            nation.flagHeight,
+                            defaultOptions         // Use default settings
+                        );
+
+                        // --- 4. Load standardized result into the final Image object for display ---
+                        const finalStandardizedImage = new Image();
+                        finalStandardizedImage.onload = () => {
+                            // Assign the STANDARDIZED image to be used for drawing
+                            nation.flagImage = finalStandardizedImage;
+                            console.log(`Flag automatically standardized for drawing: ${nation.name} (${flagName}.${nation.flagDataType}) | Original: ${nation.flagWidth}x${nation.flagHeight}`);
+                            // Resolve the main promise once the standardized image is loaded
+                            resolve({ status: 'loaded_standardized', filename: file.name, nationName: nation.name });
+                        };
+                        finalStandardizedImage.onerror = (err) => {
+                             console.error(`Error loading STANDARDIZED flag bitmap into final Image object for: ${nation.name} from ${file.name}`, err);
+                             nation.flagImage = null; // Clear potentially broken image ref
+                             reject(new Error(`Failed to load standardized flag bitmap data for ${file.name}`));
+                        };
+                        finalStandardizedImage.src = standardizedDataUrl; // Trigger loading
+
+                    } catch (standardizationError) {
+                        console.error(`Automatic flag standardization failed for ${nation.name} (${file.name}):`, standardizationError);
+                        // Standardization failed, clear the display image but keep original data
+                        nation.flagImage = null;
+                        // Reject the promise as processing failed
+                        reject(new Error(`Standardization failed for ${file.name}: ${standardizationError.message}`));
                     }
-                    // Use Math.max to ensure dimensions are at least 1px
-                    const resizedWidth = Math.max(1, Math.round(nation.flagWidth * resizeRatio));
-                    const resizedHeight = Math.max(1, Math.round(nation.flagHeight * resizeRatio));
-
-                    // --- Resize using Offscreen Canvas (Rasterizes SVGs too for canvas drawing) ---
-                    const offscreenCanvas = document.createElement('canvas');
-                    offscreenCanvas.width = resizedWidth;
-                    offscreenCanvas.height = resizedHeight;
-                    const offscreenCtx = offscreenCanvas.getContext('2d');
-                     if (!offscreenCtx) {
-                         // Fallback or error if context creation fails (very unlikely for standard canvas)
-                         throw new Error("Could not get 2D context from offscreen canvas for resizing.");
-                     }
-
-                    // Draw original image (raster or SVG) scaled down onto the offscreen canvas
-                    offscreenCtx.drawImage(originalFlagImage, 0, 0, resizedWidth, resizedHeight);
-
-                    // Get data URL of the *resized* bitmap (always PNG for consistency in drawing)
-                    const resizedDataUrl = offscreenCanvas.toDataURL('image/png');
-
-                    // --- Create Final Image Object for the Resized Bitmap Version (for drawing) ---
-                    const finalResizedImage = new Image();
-                    finalResizedImage.onload = () => {
-                        // Assign the RESIZED BITMAP image to be used for drawing
-                        nation.flagImage = finalResizedImage;
-                        console.log(`Flag processed & resized for drawing: ${nation.name} (${flagName}.${nation.flagDataType}) | Original: ${nation.flagWidth}x${nation.flagHeight} -> Draw Bitmap: ${resizedWidth}x${resizedHeight}`);
-                        resolve({ status: 'loaded', filename: file.name, nationName: nation.name });
-                    };
-                    finalResizedImage.onerror = (err) => {
-                         console.error(`Error loading RESIZED flag bitmap into final Image object for: ${nation.name} from ${file.name}`, err);
-                         nation.flagImage = null; // Clear potentially broken image ref
-                         reject(new Error(`Failed to load resized flag bitmap data for ${file.name}`));
-                    };
-                    finalResizedImage.src = resizedDataUrl; // Trigger loading of the resized bitmap data
-
-                }; // End originalFlagImage.onload
+                }; // End originalFlagImage.onload (async)
 
                 originalFlagImage.onerror = (err) => {
                     console.error(`Error loading ORIGINAL flag image into Image object for: ${nation.name} from ${file.name}`, err);
-                    // Clear all flag data on initial load error
+                    // Clear all flag data on initial load error, as we can't proceed
                     nation.flag = null; nation.flagData = null; nation.flagDataType = null; nation.flagImage = null; nation.flagWidth = null; nation.flagHeight = null;
                     reject(new Error(`Failed to load original flag image data for ${file.name}`));
                 };
 
                 // --- Set the source for the *original* Image object to trigger loading ---
                 if (isSvg) {
-                    // For SVG, create a data URL from the text content
-                    // Encode SVG data properly for use in src attribute
-                    // Use try-catch for btoa in case of invalid characters
                     try {
-                        const svgBase64 = btoa(unescape(encodeURIComponent(originalFileData)));
-                        originalFlagImage.src = `data:image/svg+xml;base64,${svgBase64}`;
-                    } catch(btoaError) {
-                         console.error(`Error encoding SVG for ${nation.name}:`, btoaError);
-                         reject(new Error(`Failed to encode SVG data for ${file.name}`));
+                        const svgDataUrl = svgStringToDataURL(originalFileData); // Use imported function
+                        if (!svgDataUrl) throw new Error("Generated SVG Data URL is null.");
+                        originalFlagImage.src = svgDataUrl;
+                    } catch(svgError) {
+                         console.error(`Error preparing SVG for initial load ${nation.name}:`, svgError);
+                         reject(new Error(`Failed to prepare SVG data for ${file.name}: ${svgError.message}`));
                     }
                 } else { // PNG, JPG, GIF, WEBP etc. (already read as DataURL)
                     originalFlagImage.src = originalFileData;
@@ -254,8 +252,9 @@ export async function loadFlagFiles(files) {
                  // Attempt to process the flag
                  try {
                      const result = await processAndAssignFlag(file, matchedNation);
-                     if (result.status === 'loaded' || result.status === 'loaded_zero_dims') {
-                         nationsSuccessfullyLoaded.add(matchedNation.name); // Track success
+                      // Track success based on new status
+                     if (result.status === 'loaded_standardized' || result.status === 'loaded_zero_dims') {
+                         nationsSuccessfullyLoaded.add(matchedNation.name);
                      }
                      return result;
                  } catch (processingError) {
@@ -292,8 +291,7 @@ export async function loadFlagFiles(files) {
         for (const [flagName, nation] of nationFlagMap.entries()) {
             // Check if a flag was *expected* but not *successfully loaded* for this nation
             if (!nationsSuccessfullyLoaded.has(nation.name)) {
-                 // Add only if it wasn't successfully loaded OR if flagImage is still null (e.g., zero dim load)
-                 // This ensures we report missing even if load started but failed zero-dim check
+                 // Add only if it wasn't successfully loaded OR if flagImage is still null (e.g., zero dim load or processing error)
                  if (!nation.flagImage) {
                      missingFromJson.push(nation.name);
                  }
@@ -313,8 +311,8 @@ export async function loadFlagFiles(files) {
 
     // Update UI
     redrawCanvas();
-    updateInfoPanel(cfg.selectedNationIndex);
-    updateNationList();
+    updateInfoPanel(cfg.selectedNationIndex); // Update info panel potentially showing new flags
+    updateNationList(); // List doesn't show flags, but good practice
 }
 
 // --- UI Triggers ---
@@ -559,6 +557,7 @@ export async function saveProjectAsZip() {
                     strength: n.strength
                 };
                 // Only include the 'flag' property if it's set (non-null, non-empty string)
+                // This 'flag' property links the nation to its corresponding flag file in the flags folder.
                 if (n.flag) {
                     nationData.flag = n.flag;
                 }
@@ -582,63 +581,49 @@ export async function saveProjectAsZip() {
             projectFolder.file(`${safeProjectName}.${extension}`, mapImageBase64, { base64: true });
         } else {
             console.warn("Could not get Base64 data for the current map image.");
-            // Decide whether to warn user or continue
             await showModal('alert', 'Warning', 'Could not include the map image data in the ZIP.');
         }
 
-        // --- 3. Prepare and Add Flags (Save ORIGINAL Data) ---
+        // --- 3. Prepare and Add Flags (Save STANDARDIZED/EDITED Data) ---
         let flagsAddedCount = 0;
         let flagSaveErrors = 0;
         const flagPromises = cfg.nations.map(async (nation) => {
-            // Check for flag name, ORIGINAL data, ORIGINAL type, and ORIGINAL dimensions
-            if (nation.flag && nation.flagData && nation.flagDataType && nation.flagWidth && nation.flagHeight) {
-                // Always save the file with the .svg extension in the zip, regardless of original type
+            // Check for flag name AND the processed flagImage (which holds the standardized data)
+            if (nation.flag && nation.flagImage && nation.flagImage.complete && nation.flagImage.naturalWidth > 0) {
+                // Always save the file with the .svg extension, embedding the standardized PNG data
                 const flagFileName = `${nation.flag}.svg`;
 
                 try {
-                    if (nation.flagDataType === 'svg') {
-                        // If the original was SVG, save the original SVG text directly.
-                        if (typeof nation.flagData === 'string') {
-                            flagsFolder.file(flagFileName, nation.flagData);
-                            flagsAddedCount++;
-                        } else {
-                             console.warn(`Flag data for SVG '${nation.name}' (file: ${flagFileName}) is not a string.`);
-                             flagSaveErrors++;
-                        }
-                    }
-                    // Handle original raster types (png, jpeg, gif, webp) by wrapping in SVG
-                    else if (['png', 'jpeg', 'gif', 'webp'].includes(nation.flagDataType)) {
-                         // Ensure original data is a valid data URL string
-                         if (typeof nation.flagData === 'string' && nation.flagData.startsWith('data:image')) {
-                             // Create SVG wrapper using ORIGINAL dimensions and ORIGINAL data URL
-                            const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${nation.flagWidth}" height="${nation.flagHeight}" viewBox="0 0 ${nation.flagWidth} ${nation.flagHeight}">\n  <image xlink:href="${nation.flagData}" width="${nation.flagWidth}" height="${nation.flagHeight}" />\n</svg>`;
-                            flagsFolder.file(flagFileName, svgContent);
-                            flagsAddedCount++;
-                        } else {
-                            console.warn(`Could not create SVG wrapper for raster flag '${nation.name}' (Type: ${nation.flagDataType}, file: ${flagFileName}): Original data URL is invalid or missing.`);
-                            flagSaveErrors++;
-                        }
-                    }
-                    else {
-                         // Log unsupported original types if necessary, but shouldn't happen with current loading logic
-                         console.warn(`Cannot save flag type '${nation.flagDataType}' for nation '${nation.name}' (file: ${flagFileName}).`);
-                         flagSaveErrors++;
+                    // Get the standardized PNG data URL from the image element
+                    const standardizedDataUrl = nation.flagImage.src;
+                    // Get the dimensions of the standardized image
+                    const standardizedWidth = nation.flagImage.naturalWidth;
+                    const standardizedHeight = nation.flagImage.naturalHeight;
+
+                    if (standardizedDataUrl && standardizedDataUrl.startsWith('data:image') && standardizedWidth > 0 && standardizedHeight > 0) {
+                        // Create the SVG wrapper using the standardized image dimensions and its Data URL
+                        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${standardizedWidth}" height="${standardizedHeight}" viewBox="0 0 ${standardizedWidth} ${standardizedHeight}">\n  <image xlink:href="${standardizedDataUrl}" width="${standardizedWidth}" height="${standardizedHeight}" />\n</svg>`;
+                        flagsFolder.file(flagFileName, svgContent);
+                        flagsAddedCount++;
+                    } else {
+                        console.warn(`Could not get valid standardized data/dimensions for flag '${nation.name}' (file: ${flagFileName}). Skipping save.`);
+                        flagSaveErrors++;
                     }
                 } catch(saveError) {
-                    console.error(`Error preparing flag '${nation.name}' (file: ${flagFileName}) for saving:`, saveError);
+                    console.error(`Error preparing standardized flag '${nation.name}' (file: ${flagFileName}) for saving:`, saveError);
                     flagSaveErrors++;
                 }
 
             } else if (nation.flag) {
-                 // Log if flag was specified in JSON but original data is missing (e.g., load failed)
-                 console.warn(`Could not save flag for '${nation.name}' (specified as '${nation.flag}'): Original flag data/dimensions not available.`);
-                 // Do not increment flagSaveErrors here, as it wasn't an error during saving attempt
+                 // Log if flag name exists but the flagImage (standardized version) is missing or invalid
+                 console.warn(`Could not save flag for '${nation.name}' (specified as '${nation.flag}'): Standardized flag image data not available or invalid.`);
+                 flagSaveErrors++; // Count this as an error/skipped flag
             }
         });
 
         // Wait for all flag processing to finish
         await Promise.all(flagPromises);
-        console.log(`Attempted to save flags. Added: ${flagsAddedCount}, Errors/Skipped: ${flagSaveErrors}.`);
+        console.log(`Attempted to save standardized flags. Added: ${flagsAddedCount}, Errors/Skipped: ${flagSaveErrors}.`);
 
         // --- 4. Generate and Download ZIP ---
         const zipBlob = await zip.generateAsync(

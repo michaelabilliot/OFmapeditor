@@ -487,14 +487,14 @@ export async function handleFlagUploadChange(event) {
     }
 
     // Proceed with processing
-    domUtils.updateStatus(`Processing flag ${file.name} for ${nation.name}...`);
+    domUtils.updateStatus(`Processing & Standardizing flag ${file.name} for ${nation.name}...`);
     try {
-        // Use the central processing function
+        // Use the central processing function (now includes standardization)
         await dataUtils.processAndAssignFlag(file, nation);
         // Update UI to show the newly processed flag
         domUtils.updateInfoPanel(cfg.selectedNationIndex);
         canvasUtils.redrawCanvas();
-        domUtils.updateStatus(`Flag set for ${nation.name}.`);
+        domUtils.updateStatus(`Flag set & standardized for ${nation.name}.`);
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown flag processing error.";
         await domUtils.showModal('alert', 'Flag Processing Error', `Could not process flag: ${errorMsg}`);
@@ -559,7 +559,7 @@ export function handleResize() {
      canvasUtils.redrawCanvas();
 }
 
-// --- NEW: Flag Editor Button Event ---
+// --- Flag Editor Button Event ---
 export async function handleFlagEditorClick() {
     if (cfg.selectedNationIndex === null || cfg.selectedNationIndex < 0 || cfg.selectedNationIndex >= cfg.nations.length) {
          console.warn("Flag Editor button clicked, but no nation selected.");
@@ -571,8 +571,8 @@ export async function handleFlagEditorClick() {
          return;
     }
 
-    // Check if flag data exists to edit
-    if (!nation.flagData || !nation.flagDataType) {
+    // Check if ORIGINAL flag data exists to edit
+    if (!nation.flagData || !nation.flagDataType || !nation.flagWidth || !nation.flagHeight) {
         await domUtils.showModal('alert', 'Cannot Edit Flag', 'No original flag data found for the selected nation. Upload a flag first.');
         return;
     }
@@ -580,40 +580,40 @@ export async function handleFlagEditorClick() {
     domUtils.updateStatus(`Opening flag editor for ${nation.name}...`);
 
     try {
-        // Call the function from flagEditor.js, passing necessary data
-        const standardizedFlagDataUrl = await openFlagEditor(
+        // Call the function from flagEditor.js, passing ORIGINAL data
+        const manuallyStandardizedDataUrl = await openFlagEditor(
             nation.flagData,
             nation.flagDataType,
             nation.flagWidth,
             nation.flagHeight
         );
 
-        if (standardizedFlagDataUrl) {
-            // Standardized flag data (Data URL) returned from the editor
-            domUtils.updateStatus(`Applying standardized flag for ${nation.name}...`);
+        if (manuallyStandardizedDataUrl) {
+            // Manually edited & standardized flag data (Data URL) returned from the editor
+            domUtils.updateStatus(`Applying manually edited flag for ${nation.name}...`);
 
-            // Create a new Image object from the standardized data URL
-            const newFlagImage = new Image();
-            newFlagImage.onload = () => {
-                 // Update the nation's flagImage (used for drawing)
-                 nation.flagImage = newFlagImage;
-                 // NOTE: We do NOT overwrite nation.flagData, nation.flagDataType,
+            // --- Update ONLY the display image (nation.flagImage) ---
+            const manuallyEditedImage = new Image();
+            manuallyEditedImage.onload = () => {
+                 // Update the nation's flagImage (used for drawing on canvas/preview)
+                 nation.flagImage = manuallyEditedImage;
+                 // NOTE: We DO NOT overwrite nation.flagData, nation.flagDataType,
                  // nation.flagWidth, nation.flagHeight here. Those store the ORIGINAL
                  // uploaded/loaded flag details for saving purposes.
                  // The editor only affects the display version (nation.flagImage).
 
-                 domUtils.updateStatus(`Standardized flag applied for ${nation.name}.`);
+                 domUtils.updateStatus(`Manually edited flag applied for ${nation.name}.`);
                  domUtils.updateInfoPanel(cfg.selectedNationIndex); // Update preview in info panel
                  canvasUtils.redrawCanvas(); // Update map display
             };
-            newFlagImage.onerror = async () => {
-                console.error(`Failed to load the standardized flag Data URL into an Image object for ${nation.name}.`);
+            manuallyEditedImage.onerror = async () => {
+                console.error(`Failed to load the manually edited flag Data URL into an Image object for ${nation.name}.`);
                  await domUtils.showModal('alert', 'Error', 'Failed to apply the edited flag.');
-                 domUtils.updateStatus(`Error applying standardized flag for ${nation.name}.`, true);
+                 domUtils.updateStatus(`Error applying edited flag for ${nation.name}.`, true);
                  // Revert UI? Maybe just leave the old preview. Info panel will update.
                  domUtils.updateInfoPanel(cfg.selectedNationIndex);
             };
-            newFlagImage.src = standardizedFlagDataUrl;
+            manuallyEditedImage.src = manuallyStandardizedDataUrl;
 
         } else {
             // Editor was cancelled or returned null
