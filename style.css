@@ -40,6 +40,14 @@
     --panel-width-info: 240px;
     --layout-gap: 10px;
 
+    /* NEW: Navigation Variables */
+    --nav-bg-color: var(--panel-bg-color);
+    --nav-border-color: var(--border-color);
+    --nav-tab-color: var(--text-color);
+    --nav-tab-hover-bg: var(--button-hover-bg-color);
+    --nav-tab-active-color: var(--link-color);
+    --nav-tab-active-border: var(--link-color);
+
     /* Flag Editor Layout/Effect Variables (Colors removed) */
     --fe-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --fe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -83,6 +91,14 @@ body.dark-mode {
      --info-flag-bg: #555;
      --info-status-color: #ccc;
      --hr-color: #555;
+
+    /* NEW: Dark Mode Navigation Variables */
+    --nav-bg-color: var(--panel-bg-color);
+    --nav-border-color: var(--border-color);
+    --nav-tab-color: var(--text-color);
+    --nav-tab-hover-bg: var(--button-hover-bg-color);
+    --nav-tab-active-color: var(--link-color);
+    --nav-tab-active-border: var(--link-color);
 }
 
 /* General Styles */
@@ -111,6 +127,7 @@ body {
     flex-grow: 1;
     width: 100%;
     display: grid;
+    /* Nav, Controls, Top Info Row, Main Content */
     grid-template-rows: auto auto auto 1fr;
     grid-template-columns: var(--panel-width-instructions) 1fr var(--panel-width-info);
     gap: var(--layout-gap);
@@ -118,22 +135,69 @@ body {
     box-sizing: border-box;
     overflow: hidden;
     height: 100%;
+    /* *** MODIFIED: Grid area names *** */
     grid-template-areas:
-        "title     title     title"
-        "controls  controls  controls"
-        "top-info  top-info  top-info"
-        "instr     canvas    info";
+        "main-nav   main-nav   main-nav" /* Changed from title */
+        "controls   controls   controls"
+        "instr-top  canvas-top info-top"
+        "instr      canvas     info";
+    /* *** END MODIFICATION *** */
 }
 
 /* Assign elements to grid areas */
-#main-title { grid-area: title; text-align: center; margin: 0 0 5px 0; font-size: 1.4em; }
-#controls { grid-area: controls; justify-content: center; max-width: none; width: 100%; margin-bottom: 0;}
-#top-info { grid-area: top-info; max-width: none; width: 100%; margin-bottom: 0; }
+/* *** MODIFIED: Assign main-nav instead of title *** */
+#main-nav { grid-area: main-nav; }
+/* *** END MODIFICATION *** */
+#controls { grid-area: controls; max-width: none; width: 100%; margin-bottom: 0;}
+#instr-top-container { grid-area: instr-top; }
+#canvas-top-container { grid-area: canvas-top; }
+#info-top-container { grid-area: info-top; }
 #instructions { grid-area: instr; }
 #canvas-container { grid-area: canvas; }
 #info-panel { grid-area: info; }
 
 /* --- Adjustments for elements within the Grid --- */
+
+/* *** ADDED: Navigation Bar Styles *** */
+#main-nav {
+    display: flex;
+    justify-content: center; /* Center the tabs */
+    gap: 5px;
+    margin-bottom: 5px; /* Space below nav */
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--nav-border-color);
+}
+
+.nav-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent; /* Placeholder for active state */
+    padding: 8px 16px;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: var(--nav-tab-color);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+    border-radius: 4px 4px 0 0; /* Slight rounding on top */
+}
+
+.nav-tab:hover:not(:disabled) {
+    background-color: var(--nav-tab-hover-bg);
+    color: var(--nav-tab-active-color); /* Use active color on hover too */
+}
+
+.nav-tab.active {
+    color: var(--nav-tab-active-color);
+    border-bottom-color: var(--nav-tab-active-border);
+    font-weight: 600;
+}
+
+.nav-tab:disabled {
+    color: var(--nav-tab-color);
+    opacity: var(--disabled-opacity);
+    cursor: not-allowed;
+}
+/* *** END Navigation Bar Styles *** */
 
 /* Controls Bar */
 #controls {
@@ -149,36 +213,160 @@ body {
     align-items: center;
     transition: background-color 0.3s, border-color 0.3s;
     box-sizing: border-box;
+    justify-content: space-between; /* Align groups left and right */
 }
-.control-group { display: flex; align-items: center; gap: 5px; }
+.control-group-left, .control-group-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.control-group { display: flex; align-items: center; gap: 5px; } /* Keep for internal spacing if needed */
+
 input[type="file"].visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
 .file-label-button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; display: inline-block; line-height: normal; text-align: center; user-select: none; }
 .file-label-button:hover { background-color: var(--button-hover-bg-color); }
 .file-label-button[data-disabled="true"] { cursor: not-allowed; opacity: var(--disabled-opacity); pointer-events: none; background-color: var(--button-bg-color); }
+
 #controls button { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--button-bg-color); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 0.9em; user-select: none; }
 #controls button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 #controls button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
-#loadFlagsButton { background-color: var(--button-info-bg-color); color: var(--button-info-text-color); border-color: var(--button-info-bg-color); }
-#loadFlagsButton:hover:not(:disabled) { opacity: 0.9; background-color: var(--button-info-bg-color); }
-#zoomControls { display: flex; align-items: center; gap: 5px; border-left: 1px solid var(--border-color); padding-left: 8px; margin-left: 3px; }
-#zoomControls button { min-width: 25px; font-weight: bold; padding: 5px 8px; }
-#zoomDisplay { font-size: 0.9em; min-width: 45px; text-align: center; background-color: rgba(0,0,0,0.05); padding: 3px 5px; border-radius: 3px; font-family: monospace; user-select: none; }
-body.dark-mode #zoomDisplay { background-color: rgba(255,255,255,0.1); }
 
-/* Status & Coordinate Display */
-#top-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9em;
-    gap: 10px;
-    box-sizing: border-box;
+/* *** ADDED: Distinct Button Styles *** */
+/* Load Map & JSON (Labels acting as buttons) */
+#loadMapLabel, #jsonLoadLabel {
+    background-color: var(--button-primary-bg-color);
+    color: var(--button-primary-text-color);
+    border-color: var(--button-primary-bg-color);
 }
-#coordinateDisplay { background-color: rgba(0,0,0,0.1); padding: 3px 8px; border-radius: 4px; min-width: 130px; text-align: right; font-family: monospace; white-space: nowrap; user-select: none; }
+#loadMapLabel:hover, #jsonLoadLabel:hover {
+    background-color: var(--button-primary-bg-color); /* Keep base color */
+    opacity: 0.9; /* Dim slightly on hover */
+}
+#loadMapLabel[data-disabled="true"], #jsonLoadLabel[data-disabled="true"] {
+    background-color: var(--button-primary-bg-color) !important; /* Keep color when disabled */
+    color: var(--button-primary-text-color) !important;
+    opacity: var(--disabled-opacity); /* Just reduce opacity */
+    border-color: var(--button-primary-bg-color) !important;
+}
+
+/* Load Flags */
+#loadFlagsButton {
+    background-color: var(--button-info-bg-color);
+    color: var(--button-info-text-color);
+    border-color: var(--button-info-bg-color);
+}
+#loadFlagsButton:hover:not(:disabled) {
+    background-color: var(--button-info-bg-color);
+    opacity: 0.9;
+}
+#loadFlagsButton:disabled {
+    background-color: var(--button-info-bg-color) !important;
+    color: var(--button-info-text-color) !important;
+    opacity: var(--disabled-opacity);
+    border-color: var(--button-info-bg-color) !important;
+}
+
+/* Save ZIP */
+#saveButton {
+    background-color: var(--button-secondary-bg-color);
+    color: var(--button-secondary-text-color);
+    border-color: var(--button-secondary-bg-color);
+}
+#saveButton:hover:not(:disabled) {
+    background-color: var(--button-secondary-bg-color);
+    opacity: 0.9;
+}
+#saveButton:disabled {
+    background-color: var(--button-secondary-bg-color) !important;
+    color: var(--button-secondary-text-color) !important;
+    opacity: var(--disabled-opacity);
+    border-color: var(--button-secondary-bg-color) !important;
+}
+/* *** END Distinct Button Styles *** */
+
+
+/* Status & Coordinate Display & Zoom (New Top Row) */
+#instr-top-container,
+#canvas-top-container,
+#info-top-container {
+    display: flex;
+    align-items: center; /* Vertically center content */
+    font-size: 0.9em;
+    box-sizing: border-box;
+    min-height: 2em; /* Ensure consistent height */
+    padding: 0 5px; /* Add slight horizontal padding */
+}
+#instr-top-container { justify-content: flex-start; }
+#canvas-top-container { justify-content: center; }
+#info-top-container { justify-content: flex-end; display: flex; } /* Ensure flex for alignment */
+
+#coordinateDisplay {
+    background-color: rgba(0,0,0,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    min-width: 130px;
+    text-align: right;
+    font-family: monospace;
+    white-space: nowrap;
+    user-select: none;
+}
 body.dark-mode #coordinateDisplay { background-color: rgba(255,255,255,0.1); }
-#status { font-weight: bold; color: var(--text-color); min-height: 1.2em; text-align: center; padding: 3px 8px; border-radius: 4px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#status {
+    font-weight: bold;
+    color: var(--text-color);
+    min-height: 1.2em;
+    text-align: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #status.error { color: var(--status-error-color); background-color: rgba(255, 0, 0, 0.1); }
 body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
+
+#zoomControlsContainer {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: rgba(0,0,0,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: auto; /* Push to the right within the flex container */
+}
+body.dark-mode #zoomControlsContainer { background-color: rgba(255,255,255,0.1); }
+
+#zoomControlsContainer button {
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    background-color: var(--button-bg-color);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9em;
+    user-select: none;
+    min-width: 20px;
+    font-weight: bold;
+    line-height: normal;
+}
+#zoomControlsContainer button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
+#zoomControlsContainer button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
+
+#zoomControlsContainer #zoomDisplay {
+    font-size: 1em;
+    min-width: 45px;
+    text-align: center;
+    background-color: rgba(0,0,0,0.05);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    user-select: none;
+    color: var(--text-color);
+}
+body.dark-mode #zoomControlsContainer #zoomDisplay { background-color: rgba(255,255,255,0.1); }
+
 
 /* Instructions Panel */
 #instructions {
@@ -280,8 +468,8 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
 #editFlagButton {
     flex-basis: calc(50% - 4px);
     max-width: 150px;
-    padding: 8px 12px; /* Increased padding */
-    font-size: 0.9em;  /* Increased font size */
+    padding: 8px 12px;
+    font-size: 0.9em;
 }
 
 
@@ -357,23 +545,25 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* Media Queries */
 @media (max-width: 800px) {
     #main-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto 1fr auto;
+        grid-template-columns: 1fr; /* Single column */
+        /* Nav, Controls, TopRow1(instr-top), TopRow2(canvas-top), TopRow3(info-top), InstrPanel, Canvas, InfoPanel */
+        grid-template-rows: auto auto auto auto auto auto 1fr auto;
         grid-template-areas:
-            "title"
+            "main-nav"   /* Nav on its own row */
             "controls"
-            "top-info"
+            "instr-top"
+            "canvas-top"
+            "info-top"
             "instr"
             "canvas"
             "info";
-        overflow-y: auto;
-        height: auto;
     }
      body { height: auto; }
 
     #instructions, #info-panel {
         height: 250px;
         width: 100%;
+        min-height: 150px;
     }
     #canvas-container {
         min-height: 40vh;
@@ -386,6 +576,24 @@ input:checked + .slider:before { transform: translateX(20px); }
      }
      #info-flag-upload-label, #editFlagButton { flex-basis: 100%; max-width: none; }
      #info-flag-remove-button { flex-basis: auto; }
+
+     /* Adjust top row alignment on mobile */
+     #instr-top-container,
+     #canvas-top-container,
+     #info-top-container {
+         justify-content: center; /* Center all top elements */
+         padding: 3px 5px; /* Consistent padding */
+         min-height: 1.8em; /* Adjust min height */
+         text-align: center; /* Center text within */
+         width: 100%; /* Ensure they take full width */
+     }
+     #coordinateDisplay { min-width: auto; text-align: center;}
+     #zoomControlsContainer { justify-content: center; }
+     #status { width: 90%; } /* Prevent status taking full width and allow centering */
+
+     /* Adjust controls bar alignment on mobile */
+     #controls { justify-content: center; } /* Center groups on mobile */
+     .control-group-left, .control-group-right { justify-content: center; }
 }
 
 /* ------------- Flag Editor Styles (Using Main App Variables) ------------- */

@@ -1,6 +1,7 @@
 // --- DOM Elements (will be assigned in main.js) ---
 export let canvas, canvasContainer, ctx;
-export let imageInput, loadMapLabel, jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton, zoomInButton, zoomOutButton, zoomResetButton, zoomDisplay;
+// MODIFIED: Removed zoom buttons/display from controls elements
+export let imageInput, loadMapLabel, jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton; // zoomInButton, zoomOutButton, zoomResetButton, zoomDisplay removed
 export let statusDiv, coordinateDisplay, nationListContainer, nationListUl, nationListCountSpan, settingsButton, settingsPanel;
 export let closeSettingsButton, markerSizeInput, markerSizeValue, darkModeToggle, nationTextSizeInput, nationTextSizeValue, flagSizeInput, flagSizeValue;
 export let inlineEditPanel, inlineEditName, inlineEditStrength, inlineEditSave, inlineEditCancel;
@@ -11,7 +12,8 @@ export let editFlagButton, flagEditorModalContainer;
 
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
-export let topInfoDiv; // Added for layout reference
+// MODIFIED: Added top row containers
+export let instrTopContainer, canvasTopContainer, infoTopContainer; // Replaced topInfoDiv
 
 // --- State Variables ---
 let _markerRadius = 8;
@@ -23,7 +25,8 @@ export let mapInfo = { name: "Untitled Map", width: 0, height: 0, fileName: "", 
 export let selectedNationIndex = null;
 export let hoveredNationIndex = null;
 export let hoveredListIndex = null;
-export let isSettingsVisible = true;
+// MODIFIED: Default settings visibility to false
+export let isSettingsVisible = false;
 export let nationIndexBeingEdited = null;
 export let zoom = 1.0;
 export let offsetX = 0;
@@ -58,7 +61,10 @@ export function assignElements() {
     statusDiv = document.getElementById('status');
     instructionsDiv = document.getElementById('instructions');
     infoPanel = document.getElementById('info-panel');
-    topInfoDiv = document.getElementById('top-info'); // Assign top-info container
+    // MODIFIED: Assign new top row containers
+    instrTopContainer = document.getElementById('instr-top-container');
+    canvasTopContainer = document.getElementById('canvas-top-container');
+    infoTopContainer = document.getElementById('info-top-container');
 
     // Assign interactive elements that exist in base HTML
     inlineEditPanel = document.getElementById('inlineEditPanel');
@@ -104,10 +110,11 @@ export function assignElements() {
     jsonLoadLabel = document.getElementById('jsonLoadLabel');
     saveButton = document.getElementById('saveButton');
     loadFlagsButton = document.getElementById('loadFlagsButton');
-    zoomInButton = document.getElementById('zoomInButton');
-    zoomOutButton = document.getElementById('zoomOutButton');
-    zoomResetButton = document.getElementById('zoomResetButton');
-    zoomDisplay = document.getElementById('zoomDisplay');
+    // Zoom buttons are now static in HTML, assign them here if needed elsewhere
+    // zoomInButton = document.getElementById('zoomInButton');
+    // zoomOutButton = document.getElementById('zoomOutButton');
+    // zoomResetButton = document.getElementById('zoomResetButton');
+    // zoomDisplay = document.getElementById('zoomDisplay');
     closeSettingsButton = document.getElementById('closeSettingsButton');
     markerSizeInput = document.getElementById('markerSizeInput');
     markerSizeValue = document.getElementById('markerSizeValue');

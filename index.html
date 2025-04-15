@@ -22,13 +22,29 @@
 
      <!-- Main Application Container -->
      <div id="main-container">
-        <!-- Header Row -->
-        <h1 id="main-title">OpenFront Map Editor</h1>
+        <!-- *** MODIFIED: Replaced Title with Navigation Bar *** -->
+        <div id="main-nav">
+            <button id="nav-map-editor" class="nav-tab active" aria-current="page">Map Editor</button>
+            <button id="nav-flag-editor" class="nav-tab" disabled title="Flag editor functionality TBD">Flag Editor</button> <!-- Initially disabled -->
+        </div>
+        <!-- *** END MODIFICATION *** -->
+
         <div id="controls"> <!-- Populated by JS --> </div>
-        <div id="top-info">
-            <div id="coordinateDisplay">X: ---, Y: ---</div>
+
+        <div id="instr-top-container">
+             <div id="coordinateDisplay">X: ---, Y: ---</div>
+        </div>
+        <div id="canvas-top-container">
             <div id="status">Load a map image to begin...</div>
-         </div>
+        </div>
+        <div id="info-top-container">
+            <div id="zoomControlsContainer">
+                 <button id="zoomOutButton" title="Zoom Out (-)">-</button>
+                 <span id="zoomDisplay">100%</span>
+                 <button id="zoomInButton" title="Zoom In (+)">+</button>
+                 <button id="zoomResetButton" title="Reset View (0)">Reset</button>
+            </div>
+        </div>
 
         <!-- Main Editor Area (Instructions, Canvas, Info Panel) -->
             <div id="instructions"> <!-- Populated by JS --> </div>
@@ -61,8 +77,7 @@
                              <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml, .png, .jpg, .jpeg, .gif, .webp, .svg">
                              <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label>
                              <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
-                             <!-- NEW: Flag Editor Button -->
-                             <button id="editFlagButton" class="btn-secondary-small" disabled title="Edit flag appearance">Flag Editor</button>
+                             <button id="editFlagButton" class="btn-secondary-small" disabled title="Edit flag appearance">Adjust Flag</button>
                          </div>
                      </div>
                      <!-- Nation Details -->
@@ -98,7 +113,7 @@
         </div>
     </div>
 
-    <!-- NEW: Flag Editor Modal Placeholder (Hidden by default) -->
+    <!-- Flag Editor Modal Placeholder (Hidden by default) -->
     <div id="flagEditorModalContainer" class="flag-editor-modal-overlay">
         <!-- Content will be populated by flagEditor.js -->
     </div>
@@ -106,12 +121,10 @@
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- NEW: Cropper.js Script (after library CSS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
     <!-- Load the main JavaScript modules -->
     <script type="module" src="js/main.js"></script>
-    <!-- NEW: Load Flag Editor Module -->
     <script type="module" src="js/flagEditor.js"></script>
 
 </body>

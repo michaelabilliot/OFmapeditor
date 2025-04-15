@@ -16,17 +16,18 @@ function initializeApp() {
     cfg.assignElements();
 
     // 2. Check if essential STATIC elements were found (needed for population)
-    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel || !cfg.topInfoDiv || !cfg.flagEditorModalContainer ) { // Added check for flag editor container
+    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel || !cfg.instrTopContainer || !cfg.canvasTopContainer || !cfg.infoTopContainer || !cfg.flagEditorModalContainer ) { // Added checks
         console.error("Essential static DOM elements not found! Aborting initialization. Check HTML structure and IDs.", {
              canvas: !!cfg.canvas, ctx: !!cfg.ctx, statusDiv: !!cfg.statusDiv, settingsPanel: !!cfg.settingsPanel,
              controlsDiv: !!cfg.controlsDiv, instructionsDiv: !!cfg.instructionsDiv, canvasContainer: !!cfg.canvasContainer,
-             infoPanel: !!cfg.infoPanel, topInfoDiv: !!cfg.topInfoDiv, flagEditorModalContainer: !!cfg.flagEditorModalContainer
+             infoPanel: !!cfg.infoPanel, instrTopContainer: !!cfg.instrTopContainer, canvasTopContainer: !!cfg.canvasTopContainer, infoTopContainer: !!cfg.infoTopContainer,
+             flagEditorModalContainer: !!cfg.flagEditorModalContainer
          });
         // Provide a user-friendly error message in the body
         document.body.innerHTML = `<div style="padding: 20px; text-align: center;">
             <h1>Initialization Error</h1>
             <p>Could not start the map editor because some essential HTML elements are missing.</p>
-            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel', 'top-info', 'flagEditorModalContainer' etc.</p>
+            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel', 'instr-top-container', 'canvas-top-container', 'info-top-container', 'flagEditorModalContainer' etc.</p>
             <p>Check the browser console (F12) for more details.</p>
             </div>`;
         return; // Stop initialization
@@ -41,7 +42,7 @@ function initializeApp() {
     cfg.assignElements();
 
     // 5. Check if essential DYNAMIC elements were found (optional but good practice)
-    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.zoomInButton || !cfg.editFlagButton) { // Added check for editFlagButton
+    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.editFlagButton) { // Removed zoom check
          console.warn("Some dynamic UI elements might be missing after population. Check populateDynamicElements() and resulting HTML IDs.");
          // Decide if this is critical enough to abort or just warn
     }
@@ -54,7 +55,7 @@ function initializeApp() {
     setupEventListeners();
 
     // 8. Set initial UI states
-    cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none';
+    cfg.settingsPanel.style.display = cfg.isSettingsVisible ? 'block' : 'none'; // Start closed
     domUtils.updateNationList(); // Show initial empty list state
     domUtils.updateInfoPanel(null); // Show initial empty info panel state
     canvasUtils.setInitialCanvasSize(); // Set initial canvas size based on container
@@ -100,21 +101,18 @@ function setupEventListeners() {
     cfg.flagSizeInput?.addEventListener('change', domUtils.saveSettings);
     cfg.darkModeToggle?.addEventListener('change', () => { domUtils.applySettings(); domUtils.saveSettings(); });
 
-    // Top Controls
-    // Use click on the label for map load
+    // Top Controls (Dynamically Added)
     cfg.loadMapLabel?.addEventListener('click', handlers.handleMapLoadClick);
-    // Listener is on the hidden input, triggered by the label click or direct interaction
     cfg.imageInput?.addEventListener('change', handlers.handleMapFileSelect);
-    // Use click on the label for JSON load (which triggers the input)
-    // Listener is on the hidden input
     cfg.jsonLoadInput?.addEventListener('change', handlers.handleJsonFileSelect);
     cfg.loadFlagsButton?.addEventListener('click', dataUtils.promptAndLoadFlags);
     cfg.saveButton?.addEventListener('click', dataUtils.saveProjectAsZip);
 
-    // Zoom Controls
-    cfg.zoomInButton?.addEventListener('click', () => canvasUtils.changeZoom(1.25));
-    cfg.zoomOutButton?.addEventListener('click', () => canvasUtils.changeZoom(1 / 1.25));
-    cfg.zoomResetButton?.addEventListener('click', canvasUtils.resetView);
+    // *** ADDED: Listeners for Static Zoom Controls ***
+    document.getElementById('zoomInButton')?.addEventListener('click', () => canvasUtils.changeZoom(1.25));
+    document.getElementById('zoomOutButton')?.addEventListener('click', () => canvasUtils.changeZoom(1 / 1.25));
+    document.getElementById('zoomResetButton')?.addEventListener('click', canvasUtils.resetView);
+    // *** END ADDITIONS ***
 
     // Canvas Interaction
     if (cfg.canvas) {
@@ -168,7 +166,7 @@ function setupEventListeners() {
     // Listener on the hidden input, triggered by label click
     cfg.infoFlagUploadInput?.addEventListener('change', handlers.handleFlagUploadChange);
     cfg.infoFlagRemoveButton?.addEventListener('click', handlers.handleFlagRemoveClick);
-    // NEW: Listener for Flag Editor Button
+    // Listener for Flag Editor Button
     cfg.editFlagButton?.addEventListener('click', handlers.handleFlagEditorClick);
 
 
@@ -182,5 +180,3 @@ function setupEventListeners() {
 // --- Run Initialization ---
 // Use DOMContentLoaded to ensure the initial HTML is parsed before trying to find elements
 document.addEventListener('DOMContentLoaded', initializeApp);
-
-// --- END OF FILE js/main.js ---

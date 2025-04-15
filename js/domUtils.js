@@ -8,7 +8,6 @@ import * as flagEditor from './flagEditor.js'; // Import if needed here, e.g., f
 
 // --- Helper ---
 /** Safely gets a CSS variable value with a fallback */
-// FIX: Added export keyword here
 export function getCssVariable(varName, fallback = '#000') {
     try {
         // Ensure document.documentElement exists and has getComputedStyle
@@ -57,28 +56,29 @@ export function populateDynamicElements() {
 
     // Controls Bar HTML
     if (cfg.controlsDiv) {
+        // *** MODIFIED: Grouped buttons for better flex alignment ***
         cfg.controlsDiv.innerHTML = `
-            <div class="control-group">
-                <input type="file" id="mapImageInput" class="visually-hidden" accept="image/*">
-                <label for="mapImageInput" id="loadMapLabel" class="file-label-button">Load Map</label>
+            <div class="control-group-left"> <!-- Group for left-aligned buttons -->
+                <div class="control-group">
+                    <input type="file" id="mapImageInput" class="visually-hidden" accept="image/*">
+                    <label for="mapImageInput" id="loadMapLabel" class="file-label-button">Load Map</label>
+                </div>
+                <div class="control-group">
+                    <input type="file" id="jsonLoadInput" class="visually-hidden" accept=".json,application/json">
+                    <label for="jsonLoadInput" id="jsonLoadLabel" class="file-label-button" data-disabled="true">Load JSON</label>
+                </div>
+                <div class="control-group">
+                    <button id="loadFlagsButton" disabled>Load Flags</button>
+                </div>
             </div>
-            <div class="control-group">
-                <input type="file" id="jsonLoadInput" class="visually-hidden" accept=".json,application/json">
-                <label for="jsonLoadInput" id="jsonLoadLabel" class="file-label-button" data-disabled="true">Load JSON</label>
-            </div>
-            <div class="control-group">
-                <button id="loadFlagsButton" disabled>Load Flags</button>
-            </div>
-            <div class="control-group">
-                <button id="saveButton" disabled>Save ZIP</button>
-            </div>
-            <div id="zoomControls" class="control-group">
-                <button id="zoomOutButton" title="Zoom Out (-)">-</button>
-                <span id="zoomDisplay">100%</span>
-                <button id="zoomInButton" title="Zoom In (+)">+</button>
-                <button id="zoomResetButton" title="Reset View (0)">Reset</button>
+
+            <div class="control-group-right"> <!-- Group for right-aligned (or center) buttons -->
+                 <div class="control-group">
+                    <button id="saveButton" disabled>Save ZIP</button>
+                 </div>
             </div>
         `;
+        // *** END MODIFICATIONS ***
     } else {
          console.error("Cannot populate controls: #controls not found.");
     }
@@ -91,14 +91,14 @@ export function populateDynamicElements() {
             <ul>
                 <li><span class="highlight">Load Map:</span> Select base map image (<span class="highlight">will be auto-colorized!</span>).</li>
                 <li><span class="highlight">Load JSON:</span> (Optional) Load existing nation data.</li>
-                <li><span class="highlight">Load Flags:</span> Load flag images (<span class="highlight">PNG or SVG</span>). Match filename (before extension) to nation's 'flag' property in JSON, or generated name (e.g., 'my_nation'). <span class="highlight">Select ALL relevant flag files</span>.</li>
-                <li><span class="highlight">Save ZIP:</span> Save project (map, json, flags) as ZIP. <span class="highlight">All flags are saved as SVG files</span> (original SVGs saved directly, PNGs/rasters embedded in SVG).</li>
+                <li><span class="highlight">Load Flags:</span> Load flag images (<span class="highlight">PNG or SVG</span>). Match filename (before extension) to nation's 'flag' property in JSON, or generated name (e.g., 'my_nation'). <span class="highlight">Select ALL relevant flag files</span>. Flags are auto-standardized on load.</li>
+                <li><span class="highlight">Save ZIP:</span> Save project (map, json, flags) as ZIP. <span class="highlight">All flags are saved as SVG files containing the standardized PNG appearance</span>.</li>
             </ul>
             <p><b>Map Interaction:</b></p>
             <ul>
                 <li><b>Pan:</b> Click & Drag empty space.</li>
-                <li><b>Zoom:</b> Mouse Wheel or +/- keys.</li>
-                <li><b>Reset View:</b> '0' key or Reset button.</li>
+                <li><b>Zoom:</b> Mouse Wheel or +/- keys (controls now above Nation Info).</li>
+                <li><b>Reset View:</b> '0' key or Reset button (controls now above Nation Info).</li>
             </ul>
             <p><b>Nations:</b></p>
             <ul>
@@ -109,14 +109,14 @@ export function populateDynamicElements() {
                 <li><b>Delete:</b> Select, then Delete/Backspace key OR '✖' in list.</li>
                 <li><span class="highlight">Go To (List):</span> Double-click list item to <span class="highlight">smoothly pan</span> map.</li>
                 <li><b>Add/Change Flag:</b> Select nation, use 'Upload Flag' in Info Panel (<span class="highlight">PNG or SVG</span>).</li>
-                <li><span class="highlight">Edit Flag Appearance:</span> Select nation with flag, use 'Flag Editor' button.</li>
+                <li><span class="highlight">Edit Flag Appearance:</span> Select nation with flag, use 'Flag Editor' button to refine standardization.</li>
                 <li><b>Remove Flag:</b> Select nation, use '✖ Remove' in Info Panel.</li>
             </ul>
             <p><b>Other:</b></p>
             <ul>
                 <li><b>Deselect:</b> Press Esc key.</li>
                 <li><b>Save:</b> Press 'S' key (saves ZIP).</li>
-                <li><b>Settings (⚙️):</b> Theme, sizes (marker, text, flag).</li>
+                <li><b>Settings (⚙️):</b> Theme, sizes (marker, text, flag). Starts closed.</li>
             </ul>
         `;
     } else {
@@ -142,8 +142,10 @@ export function updateCoordinateDisplay(mapPos) {
 }
 
 export function updateZoomDisplay() {
-    if (cfg.zoomDisplay) {
-        cfg.zoomDisplay.textContent = `${Math.round(cfg.zoom * 100)}%`;
+    // Now targets the span in its new location
+    const zoomDisplaySpan = document.getElementById('zoomDisplay');
+    if (zoomDisplaySpan) {
+        zoomDisplaySpan.textContent = `${Math.round(cfg.zoom * 100)}%`;
     }
 }
 
@@ -287,30 +289,33 @@ export function updateInfoPanel(nationIndex) {
 
             // Update Flag Section
             let flagStatusText = '';
-            let hasFlagData = nation.flagData && nation.flagDataType;
+            // Check if flagImage exists and is loaded (this is the standardized one now)
+            let hasDisplayableFlag = nation.flagImage && nation.flagImage.complete && nation.flagImage.naturalWidth > 0;
+            // Check if *original* data exists (needed for editing)
+            let hasOriginalData = nation.flagData && nation.flagDataType;
 
-            if (nation.flagImage && nation.flagImage.src) {
+            if (hasDisplayableFlag) {
                 cfg.infoFlagPreview.src = nation.flagImage.src;
-                cfg.infoFlagPreview.alt = `${nation.name} Flag Preview`;
+                cfg.infoFlagPreview.alt = `${nation.name} Standardized Flag Preview`;
                 cfg.infoFlagPreview.style.display = 'block';
-                cfg.infoFlagRemoveButton.disabled = false;
-                cfg.editFlagButton.disabled = !hasFlagData; // Enable editor ONLY if original data exists
+                cfg.infoFlagRemoveButton.disabled = false; // Can remove if a flag exists
+                cfg.editFlagButton.disabled = !hasOriginalData; // Enable editor ONLY if original data exists
 
-                const flagFileName = nation.flag ? `${nation.flag}.${nation.flagDataType || '?'}` : 'Unknown Flag File';
-                flagStatusText = `Loaded: ${flagFileName}`;
-                if (nation.flagDataType && nation.flagDataType !== 'svg') {
-                    flagStatusText += ' (will save as .svg)';
-                } else if (!nation.flagDataType) {
-                     flagStatusText += ' (Type unknown, will attempt SVG save)';
-                }
-            } else if (nation.flag && hasFlagData) {
-                 flagStatusText = `Flag data present for ${nation.flag}.${nation.flagDataType}, but preview unavailable.`;
+                const originalFileName = nation.flag ? `${nation.flag}.${nation.flagDataType || '?'}` : 'Unknown Original File';
+                flagStatusText = `Loaded: ${originalFileName} (Standardized)`;
+
+            } else if (nation.flag && hasOriginalData) {
+                 // Original data exists, but standardized image failed to load/process
+                 flagStatusText = `Original: ${nation.flag}.${nation.flagDataType}. Display error.`;
                  cfg.infoFlagRemoveButton.disabled = false;
-                 cfg.editFlagButton.disabled = false; // Enable editor as original data exists
+                 cfg.editFlagButton.disabled = false; // Can still try to edit from original data
+                 cfg.infoFlagPreview.style.display = 'none'; // Hide broken preview
              } else if (nation.flag) {
+                 // Only flag name specified (e.g. from JSON), but no data/image loaded yet
                 const assumedExt = nation.flag.toLowerCase().endsWith('.svg') ? 'svg' : (nation.flag.toLowerCase().endsWith('.png') ? 'png' : '...');
                 flagStatusText = `Flag specified: ${nation.flag}.${assumedExt} (Needs image load/upload)`;
-                cfg.infoFlagRemoveButton.disabled = false;
+                cfg.infoFlagRemoveButton.disabled = false; // Allow removing the reference
+                cfg.editFlagButton.disabled = true; // Cannot edit without data
             }
 
             if (flagStatusText) {
