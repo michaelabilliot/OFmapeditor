@@ -1,4 +1,3 @@
-// --- START OF FILE js/dataUtils.js ---
 import * as cfg from './config.js';
 import { updateStatus, showModal, updateNationList, updateInfoPanel, closeInlineEditor } from './domUtils.js';
 import { redrawCanvas, resetView } from './canvasUtils.js';
@@ -675,4 +674,3 @@ export async function saveProjectAsZip() {
         updateStatus(`Error creating ZIP: ${errorMsg}`, true);
     }
 }
-// --- END OF FILE js/dataUtils.js ---

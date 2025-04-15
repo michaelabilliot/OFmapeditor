@@ -1,10 +1,11 @@
-// --- START OF FILE js/eventHandlers.js ---
 import * as cfg from './config.js';
 import * as domUtils from './domUtils.js';
 import * as canvasUtils from './canvasUtils.js';
 import * as mapUtils from './mapUtils.js';
 import * as dataUtils from './dataUtils.js';
 import * as nationUtils from './nationUtils.js';
+// NEW: Import flagEditor functions (assuming openFlagEditor exists)
+import { openFlagEditor } from './flagEditor.js';
 
 // --- Map Loading Events ---
 export async function handleMapLoadClick(event) {
@@ -377,11 +378,15 @@ export async function handleDocumentKeyDown(event) {
     }
 
     // --- Ignore most other shortcuts if a modal is open, a general input is focused, or animating ---
-    if (cfg.currentModalResolve || cfg.isPanningAnimationActive || isInputFocused) {
+    // Check if FLAG EDITOR MODAL is open (adapt ID if needed)
+    const isFlagEditorOpen = cfg.flagEditorModalContainer?.style.display === 'flex'; // Check container visibility
+
+    if (cfg.currentModalResolve || cfg.isPanningAnimationActive || isInputFocused || isFlagEditorOpen) {
+         // NEW: Added check for isFlagEditorOpen
         return; // Ignore other keys in these states
     }
 
-    // --- General keyboard shortcuts (no modal, no animation, no input focus) ---
+    // --- General keyboard shortcuts (no modal, no animation, no input focus, no flag editor) ---
     // Check if focus is on the body or canvas (or nothing specific) before acting
      if (activeElement !== document.body && activeElement !== cfg.canvas && activeElement !== null) {
          return; // Don't steal keys if focus is elsewhere unexpectedly
@@ -413,7 +418,7 @@ export async function handleDocumentKeyDown(event) {
              event.preventDefault();
              if (cfg.isSettingsVisible && cfg.settingsPanel?.style.display !== 'none') {
                  // Hide settings panel if visible
-                 handlers.handleSettingsToggle(); // Use the toggle handler
+                 handleSettingsToggle(); // Use the toggle handler
              } else if (cfg.selectedNationIndex !== null) {
                  // Deselect nation if one is selected and settings aren't open
                  cfg.setSelectedNationIndex(null);
@@ -554,5 +559,70 @@ export function handleResize() {
      canvasUtils.redrawCanvas();
 }
 
+// --- NEW: Flag Editor Button Event ---
+export async function handleFlagEditorClick() {
+    if (cfg.selectedNationIndex === null || cfg.selectedNationIndex < 0 || cfg.selectedNationIndex >= cfg.nations.length) {
+         console.warn("Flag Editor button clicked, but no nation selected.");
+         return;
+    }
+    const nation = cfg.nations[cfg.selectedNationIndex];
+    if (!nation) {
+         console.error("Selected nation index invalid during Flag Editor click.");
+         return;
+    }
 
-// --- END OF FILE js/eventHandlers.js ---
+    // Check if flag data exists to edit
+    if (!nation.flagData || !nation.flagDataType) {
+        await domUtils.showModal('alert', 'Cannot Edit Flag', 'No original flag data found for the selected nation. Upload a flag first.');
+        return;
+    }
+
+    domUtils.updateStatus(`Opening flag editor for ${nation.name}...`);
+
+    try {
+        // Call the function from flagEditor.js, passing necessary data
+        const standardizedFlagDataUrl = await openFlagEditor(
+            nation.flagData,
+            nation.flagDataType,
+            nation.flagWidth,
+            nation.flagHeight
+        );
+
+        if (standardizedFlagDataUrl) {
+            // Standardized flag data (Data URL) returned from the editor
+            domUtils.updateStatus(`Applying standardized flag for ${nation.name}...`);
+
+            // Create a new Image object from the standardized data URL
+            const newFlagImage = new Image();
+            newFlagImage.onload = () => {
+                 // Update the nation's flagImage (used for drawing)
+                 nation.flagImage = newFlagImage;
+                 // NOTE: We do NOT overwrite nation.flagData, nation.flagDataType,
+                 // nation.flagWidth, nation.flagHeight here. Those store the ORIGINAL
+                 // uploaded/loaded flag details for saving purposes.
+                 // The editor only affects the display version (nation.flagImage).
+
+                 domUtils.updateStatus(`Standardized flag applied for ${nation.name}.`);
+                 domUtils.updateInfoPanel(cfg.selectedNationIndex); // Update preview in info panel
+                 canvasUtils.redrawCanvas(); // Update map display
+            };
+            newFlagImage.onerror = async () => {
+                console.error(`Failed to load the standardized flag Data URL into an Image object for ${nation.name}.`);
+                 await domUtils.showModal('alert', 'Error', 'Failed to apply the edited flag.');
+                 domUtils.updateStatus(`Error applying standardized flag for ${nation.name}.`, true);
+                 // Revert UI? Maybe just leave the old preview. Info panel will update.
+                 domUtils.updateInfoPanel(cfg.selectedNationIndex);
+            };
+            newFlagImage.src = standardizedFlagDataUrl;
+
+        } else {
+            // Editor was cancelled or returned null
+            domUtils.updateStatus(`Flag editing cancelled for ${nation.name}.`);
+        }
+
+    } catch (error) {
+         console.error("Error during flag editor process:", error);
+         await domUtils.showModal('alert', 'Flag Editor Error', `An error occurred: ${error.message}`);
+         domUtils.updateStatus(`Error opening/using flag editor: ${error.message}`, true);
+    }
+}

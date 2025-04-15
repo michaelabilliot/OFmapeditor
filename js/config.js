@@ -1,5 +1,3 @@
-// --- START OF FILE js/config.js ---
-
 // --- DOM Elements (will be assigned in main.js) ---
 export let canvas, canvasContainer, ctx;
 export let imageInput, loadMapLabel, jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton, zoomInButton, zoomOutButton, zoomResetButton, zoomDisplay;
@@ -8,6 +6,9 @@ export let closeSettingsButton, markerSizeInput, markerSizeValue, darkModeToggle
 export let inlineEditPanel, inlineEditName, inlineEditStrength, inlineEditSave, inlineEditCancel;
 export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
+// NEW: Flag Editor Elements
+export let editFlagButton, flagEditorModalContainer;
+
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
 export let topInfoDiv; // Added for layout reference
@@ -29,9 +30,7 @@ export let offsetX = 0;
 export let offsetY = 0;
 export const minZoom = 0.05;
 export const maxZoom = 25.0;
-// --- ADJUSTED ZOOM SENSITIVITY ---
-export const zoomSensitivity = 0.0005; // Reduced from 0.001 to make zoom slower
-// ---------------------------------
+export const zoomSensitivity = 0.0005; // Reduced sensitivity
 export let isPanning = false;
 export let draggingNation = false;
 export let potentialPan = false;
@@ -75,6 +74,10 @@ export function assignElements() {
     infoFlagUploadInput = document.getElementById('info-flag-upload-input');
     infoFlagUploadLabel = document.getElementById('info-flag-upload-label');
     infoFlagRemoveButton = document.getElementById('info-flag-remove-button');
+    // NEW: Flag Editor elements
+    editFlagButton = document.getElementById('editFlagButton');
+    flagEditorModalContainer = document.getElementById('flagEditorModalContainer');
+
     nationListContainer = document.getElementById('nationListContainer');
     nationListUl = document.getElementById('nationList');
     nationListCountSpan = document.getElementById('nationListCount');
@@ -138,5 +141,3 @@ export function setDragNationOffset(offset) { dragNationOffset = offset; }
 export function setCurrentModalResolve(resolveFn) { currentModalResolve = resolveFn; }
 export function setIsPanningAnimationActive(state) { isPanningAnimationActive = state; }
 export function setIsSettingsVisible(state) { isSettingsVisible = state; }
-
-// --- END OF FILE js/config.js ---

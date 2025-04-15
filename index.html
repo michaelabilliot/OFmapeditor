@@ -8,6 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Optional: Load FileSaver.js for more robust downloads -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- NEW: Cropper.js CSS (for Flag Editor) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
     <!-- Link to the CSS file -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -29,8 +31,6 @@
          </div>
 
         <!-- Main Editor Area (Instructions, Canvas, Info Panel) -->
-        <!-- This div might become redundant with CSS Grid, check style.css -->
-        <!-- <div id="editor-area"> -->
             <div id="instructions"> <!-- Populated by JS --> </div>
 
             <div id="canvas-container">
@@ -61,6 +61,8 @@
                              <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml, .png, .jpg, .jpeg, .gif, .webp, .svg">
                              <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label>
                              <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
+                             <!-- NEW: Flag Editor Button -->
+                             <button id="editFlagButton" class="btn-secondary-small" disabled title="Edit flag appearance">Flag Editor</button>
                          </div>
                      </div>
                      <!-- Nation Details -->
@@ -77,7 +79,6 @@
                     </ul>
                  </div>
              </div>
-        <!-- </div> -->
     </div>
 
     <!-- Modal Structure (Hidden by default) -->
@@ -97,8 +98,21 @@
         </div>
     </div>
 
-    <!-- Load the main JavaScript module -->
+    <!-- NEW: Flag Editor Modal Placeholder (Hidden by default) -->
+    <div id="flagEditorModalContainer" class="flag-editor-modal-overlay">
+        <!-- Content will be populated by flagEditor.js -->
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- NEW: Cropper.js Script (after library CSS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <!-- Load the main JavaScript modules -->
     <script type="module" src="js/main.js"></script>
+    <!-- NEW: Load Flag Editor Module -->
+    <script type="module" src="js/flagEditor.js"></script>
 
 </body>
 </html>

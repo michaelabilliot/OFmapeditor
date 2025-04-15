@@ -1,12 +1,14 @@
-// --- START OF FILE js/domUtils.js ---
 import * as cfg from './config.js';
 // Import specific functions needed, including mapToCanvasCoords statically
 import { redrawCanvas, mapToCanvasCoords, smoothPanTo } from './canvasUtils.js';
 // Import only needed functions
 import { handleDeleteNation } from './nationUtils.js';
+// NEW: Import flagEditor functions (assuming it exports necessary functions)
+import * as flagEditor from './flagEditor.js'; // Import if needed here, e.g., for showing/hiding modal
 
 // --- Helper ---
 /** Safely gets a CSS variable value with a fallback */
+// FIX: Added export keyword here
 export function getCssVariable(varName, fallback = '#000') {
     try {
         // Ensure document.documentElement exists and has getComputedStyle
@@ -107,6 +109,7 @@ export function populateDynamicElements() {
                 <li><b>Delete:</b> Select, then Delete/Backspace key OR '✖' in list.</li>
                 <li><span class="highlight">Go To (List):</span> Double-click list item to <span class="highlight">smoothly pan</span> map.</li>
                 <li><b>Add/Change Flag:</b> Select nation, use 'Upload Flag' in Info Panel (<span class="highlight">PNG or SVG</span>).</li>
+                <li><span class="highlight">Edit Flag Appearance:</span> Select nation with flag, use 'Flag Editor' button.</li>
                 <li><b>Remove Flag:</b> Select nation, use '✖ Remove' in Info Panel.</li>
             </ul>
             <p><b>Other:</b></p>
@@ -245,87 +248,76 @@ export function updateNationList() {
 
 
 export function updateInfoPanel(nationIndex) {
-    // Check if all required info panel elements exist
     const requiredElements = [
         cfg.infoNameSpan, cfg.infoStrengthSpan, cfg.infoPlaceholder,
         cfg.infoFlagPreview, cfg.infoFlagStatus, cfg.infoFlagUploadLabel,
-        cfg.infoFlagUploadInput, cfg.infoFlagRemoveButton
+        cfg.infoFlagUploadInput, cfg.infoFlagRemoveButton,
+        cfg.editFlagButton
     ];
-    if (requiredElements.some(el => !el)) {
-        // console.warn("Info panel elements not ready for updateInfoPanel");
-        return; // Silently return if elements aren't ready (e.g., during init)
-    }
+    if (requiredElements.some(el => !el)) { return; }
 
     const noNationSelected = nationIndex === null || nationIndex < 0 || nationIndex >= cfg.nations.length;
 
-    // --- Reset Flag UI State ---
+    // Reset Flag UI State
     cfg.infoFlagPreview.style.display = 'none';
-    cfg.infoFlagPreview.removeAttribute('src'); // Clear src to prevent showing old image briefly
-    cfg.infoFlagPreview.alt = 'Nation Flag Preview'; // Reset alt text
+    cfg.infoFlagPreview.removeAttribute('src');
+    cfg.infoFlagPreview.alt = 'Nation Flag Preview';
     cfg.infoFlagStatus.style.display = 'none';
     cfg.infoFlagStatus.textContent = '';
-    // Disable flag controls by default
     cfg.infoFlagUploadLabel.setAttribute('data-disabled', 'true');
     cfg.infoFlagUploadInput.disabled = true;
     cfg.infoFlagRemoveButton.disabled = true;
+    cfg.editFlagButton.disabled = true;
 
 
     if (noNationSelected) {
-        // --- No Nation Selected ---
         cfg.infoNameSpan.textContent = '--';
         cfg.infoStrengthSpan.textContent = '--';
-        cfg.infoPlaceholder.style.display = 'block'; // Show placeholder text
+        cfg.infoPlaceholder.style.display = 'block';
     } else {
-        // --- Nation Selected ---
         const nation = cfg.nations[nationIndex];
         if (nation) {
             cfg.infoNameSpan.textContent = nation.name;
             cfg.infoStrengthSpan.textContent = nation.strength;
-            cfg.infoPlaceholder.style.display = 'none'; // Hide placeholder
+            cfg.infoPlaceholder.style.display = 'none';
 
             // Enable flag upload controls
             cfg.infoFlagUploadLabel.removeAttribute('data-disabled');
             cfg.infoFlagUploadInput.disabled = false;
 
-            // --- Update Flag Section Based on Nation Data ---
+            // Update Flag Section
             let flagStatusText = '';
+            let hasFlagData = nation.flagData && nation.flagDataType;
+
             if (nation.flagImage && nation.flagImage.src) {
-                // Flag image is loaded and ready for display (this is the resized bitmap)
                 cfg.infoFlagPreview.src = nation.flagImage.src;
                 cfg.infoFlagPreview.alt = `${nation.name} Flag Preview`;
                 cfg.infoFlagPreview.style.display = 'block';
-                cfg.infoFlagRemoveButton.disabled = false; // Enable remove button
+                cfg.infoFlagRemoveButton.disabled = false;
+                cfg.editFlagButton.disabled = !hasFlagData; // Enable editor ONLY if original data exists
 
-                // Construct status message including original type and save format hint
                 const flagFileName = nation.flag ? `${nation.flag}.${nation.flagDataType || '?'}` : 'Unknown Flag File';
                 flagStatusText = `Loaded: ${flagFileName}`;
                 if (nation.flagDataType && nation.flagDataType !== 'svg') {
                     flagStatusText += ' (will save as .svg)';
                 } else if (!nation.flagDataType) {
-                    flagStatusText += ' (Type unknown, will attempt SVG save)';
+                     flagStatusText += ' (Type unknown, will attempt SVG save)';
                 }
-
-            } else if (nation.flag && nation.flagData && nation.flagDataType) {
-                 // Flag data exists (original), but image object isn't loaded/ready (e.g., zero dims, load error)
+            } else if (nation.flag && hasFlagData) {
                  flagStatusText = `Flag data present for ${nation.flag}.${nation.flagDataType}, but preview unavailable.`;
-                 cfg.infoFlagRemoveButton.disabled = false; // Allow removal even if preview failed
-
+                 cfg.infoFlagRemoveButton.disabled = false;
+                 cfg.editFlagButton.disabled = false; // Enable editor as original data exists
              } else if (nation.flag) {
-                // Flag name specified (e.g., from JSON), but no data loaded yet
-                const assumedExt = nation.flag.toLowerCase().endsWith('.svg') ? 'svg' : (nation.flag.toLowerCase().endsWith('.png') ? 'png' : '...'); // Basic guess
+                const assumedExt = nation.flag.toLowerCase().endsWith('.svg') ? 'svg' : (nation.flag.toLowerCase().endsWith('.png') ? 'png' : '...');
                 flagStatusText = `Flag specified: ${nation.flag}.${assumedExt} (Needs image load/upload)`;
-                cfg.infoFlagRemoveButton.disabled = false; // Allow removal even if not loaded
+                cfg.infoFlagRemoveButton.disabled = false;
             }
-            // else: no flag info at all, controls remain disabled, no status text needed
 
-            // Display status text if generated
             if (flagStatusText) {
                  cfg.infoFlagStatus.textContent = flagStatusText;
                  cfg.infoFlagStatus.style.display = 'block';
             }
-
         } else {
-            // Should not happen if index is valid, but handle defensively
             console.error(`Could not find nation data for valid index: ${nationIndex}`);
             cfg.infoNameSpan.textContent = 'Error';
             cfg.infoStrengthSpan.textContent = '?';
@@ -341,46 +333,30 @@ export function openInlineEditor(index, mapX, mapY) {
     const nation = cfg.nations[index];
     if (!nation) return;
 
-    // Set state and populate inputs
     cfg.setNationIndexBeingEdited(index);
     cfg.inlineEditName.value = nation.name;
     cfg.inlineEditStrength.value = nation.strength;
 
-    // --- Calculate Panel Position ---
-    // Convert map coordinates to canvas (screen) coordinates
     const canvasPos = mapToCanvasCoords(mapX, mapY);
-    if (!canvasPos || !cfg.canvasContainer || !cfg.canvas) return; // Need canvas and container for positioning
+    if (!canvasPos || !cfg.canvasContainer || !cfg.canvas) return;
 
-    const panelWidth = cfg.inlineEditPanel.offsetWidth || 220; // Use default if offsetWidth is 0
+    const panelWidth = cfg.inlineEditPanel.offsetWidth || 220;
     const panelHeight = cfg.inlineEditPanel.offsetHeight || 130;
     const containerWidth = cfg.canvasContainer.clientWidth;
     const containerHeight = cfg.canvasContainer.clientHeight;
-    const markerScreenRadius = cfg.markerRadius(); // Use getter
-    const panelMargin = 15; // Space from marker
+    const markerScreenRadius = cfg.markerRadius();
+    const panelMargin = 15;
 
-    // Default position: right and slightly below marker center
     let panelX = canvasPos.x + markerScreenRadius + panelMargin;
     let panelY = canvasPos.y + 5;
+    if (panelX + panelWidth > containerWidth - 10) { panelX = canvasPos.x - panelWidth - markerScreenRadius - panelMargin; }
+    if (panelY + panelHeight > containerHeight - 10) { panelY = canvasPos.y - panelHeight - 5; }
+    panelX = Math.max(5, panelX); panelY = Math.max(5, panelY);
 
-    // Adjust if panel goes off-screen right
-    if (panelX + panelWidth > containerWidth - 10) { // 10px buffer from edge
-        panelX = canvasPos.x - panelWidth - markerScreenRadius - panelMargin; // Position left
-    }
-    // Adjust if panel goes off-screen bottom
-    if (panelY + panelHeight > containerHeight - 10) {
-        panelY = canvasPos.y - panelHeight - 5; // Position above
-    }
-
-    // Ensure panel stays within bounds (minimum 5px from edge)
-    panelX = Math.max(5, panelX);
-    panelY = Math.max(5, panelY);
-
-    // Apply position and display
     cfg.inlineEditPanel.style.left = `${panelX}px`;
     cfg.inlineEditPanel.style.top = `${panelY}px`;
     cfg.inlineEditPanel.style.display = 'block';
 
-    // Focus and select the name input for quick editing
     cfg.inlineEditName.focus();
     cfg.inlineEditName.select();
 
@@ -389,289 +365,107 @@ export function openInlineEditor(index, mapX, mapY) {
 
 export function closeInlineEditor() {
     if (!cfg.inlineEditPanel) return;
-    // Only change status if the editor was actually open
-    if (cfg.inlineEditPanel.style.display === 'block' && cfg.nationIndexBeingEdited !== null) {
-        // Optional: Indicate finished/cancelled
-        // const nationName = cfg.nations[cfg.nationIndexBeingEdited]?.name || 'nation';
-        // updateStatus(`Finished editing ${nationName}.`);
-    }
     cfg.inlineEditPanel.style.display = 'none';
-    cfg.setNationIndexBeingEdited(null); // Clear the index being edited
-
-    // Optional: Refocus the canvas after closing editor?
-    // cfg.canvas?.focus();
+    cfg.setNationIndexBeingEdited(null);
 }
 
 // --- Settings ---
 export function applySettings() {
-    // Check if elements exist before accessing value property
     if (!cfg.markerSizeInput || !cfg.nationTextSizeInput || !cfg.flagSizeInput || !cfg.darkModeToggle || !cfg.markerSizeValue || !cfg.nationTextSizeValue || !cfg.flagSizeValue) {
-         console.warn("Cannot apply settings: One or more settings elements not found.");
-         return;
+         console.warn("Cannot apply settings: One or more settings elements not found."); return;
     }
-
-    // Update config values from inputs USING SETTERS
     const newMarkerRadius = parseInt(cfg.markerSizeInput.value, 10);
     const newNationTextSize = parseInt(cfg.nationTextSizeInput.value, 10);
     const newFlagSize = parseInt(cfg.flagSizeInput.value, 10);
-
-    cfg.setMarkerRadius(newMarkerRadius);
-    cfg.setNationTextSize(newNationTextSize);
-    cfg.setFlagBaseDisplaySize(newFlagSize);
-
-    // Update UI display values
-    cfg.markerSizeValue.textContent = newMarkerRadius;
-    cfg.nationTextSizeValue.textContent = newNationTextSize;
-    cfg.flagSizeValue.textContent = newFlagSize;
-
-    // Apply dark mode class to body
+    cfg.setMarkerRadius(newMarkerRadius); cfg.setNationTextSize(newNationTextSize); cfg.setFlagBaseDisplaySize(newFlagSize);
+    cfg.markerSizeValue.textContent = newMarkerRadius; cfg.nationTextSizeValue.textContent = newNationTextSize; cfg.flagSizeValue.textContent = newFlagSize;
     document.body.classList.toggle('dark-mode', cfg.darkModeToggle.checked);
-
-    // Redraw canvas immediately to reflect changes
     redrawCanvas();
 }
 
 export function saveSettings() {
-    // Check if elements exist before accessing value/checked properties
     if (!cfg.darkModeToggle || !cfg.markerSizeInput || !cfg.nationTextSizeInput || !cfg.flagSizeInput) {
-         console.warn("Cannot save settings: One or more settings elements not found.");
-         return;
+         console.warn("Cannot save settings: One or more settings elements not found."); return;
     }
     try {
-        // Use getters to retrieve current config values before saving
         localStorage.setItem('mapEditor_markerRadius', cfg.markerRadius().toString());
         localStorage.setItem('mapEditor_nationTextSize', cfg.nationTextSize().toString());
         localStorage.setItem('mapEditor_flagBaseDisplaySize', cfg.flagBaseDisplaySize().toString());
         localStorage.setItem('mapEditor_darkMode', cfg.darkModeToggle.checked.toString());
-    } catch (e) {
-        console.warn("Could not save settings to localStorage:", e);
-    }
+    } catch (e) { console.warn("Could not save settings to localStorage:", e); }
 }
 
 export function loadSettings() {
-    // Check if elements exist before attempting to set their values
     if (!cfg.markerSizeInput || !cfg.darkModeToggle || !cfg.nationTextSizeInput || !cfg.flagSizeInput) {
-        console.warn("Cannot load settings: One or more settings elements not found.");
-        // Still try to apply defaults
-        applySettings();
-        return;
+        console.warn("Cannot load settings: One or more settings elements not found."); applySettings(); return;
     }
     try {
         const savedRadius = localStorage.getItem('mapEditor_markerRadius');
-        if (savedRadius !== null) {
-            const radius = parseInt(savedRadius, 10);
-            // Validate loaded value against input constraints
-            if (!isNaN(radius) && radius >= parseInt(cfg.markerSizeInput.min, 10) && radius <= parseInt(cfg.markerSizeInput.max, 10)) {
-                cfg.setMarkerRadius(radius); // Use SETTER
-                cfg.markerSizeInput.value = String(radius);
-            }
-        }
-
+        if (savedRadius !== null) { const radius = parseInt(savedRadius, 10); if (!isNaN(radius) && cfg.markerSizeInput && radius >= parseInt(cfg.markerSizeInput.min, 10) && radius <= parseInt(cfg.markerSizeInput.max, 10)) { cfg.setMarkerRadius(radius); cfg.markerSizeInput.value = String(radius); } }
         const savedTextSize = localStorage.getItem('mapEditor_nationTextSize');
-        if (savedTextSize !== null) {
-             const size = parseInt(savedTextSize, 10);
-             if (!isNaN(size) && size >= parseInt(cfg.nationTextSizeInput.min, 10) && size <= parseInt(cfg.nationTextSizeInput.max, 10)) {
-                 cfg.setNationTextSize(size); // Use SETTER
-                 cfg.nationTextSizeInput.value = String(size);
-             }
-        }
-
+        if (savedTextSize !== null) { const size = parseInt(savedTextSize, 10); if (!isNaN(size) && cfg.nationTextSizeInput && size >= parseInt(cfg.nationTextSizeInput.min, 10) && size <= parseInt(cfg.nationTextSizeInput.max, 10)) { cfg.setNationTextSize(size); cfg.nationTextSizeInput.value = String(size); } }
         const savedFlagSize = localStorage.getItem('mapEditor_flagBaseDisplaySize');
-         if (savedFlagSize !== null) {
-             const size = parseInt(savedFlagSize, 10);
-             if (!isNaN(size) && size >= parseInt(cfg.flagSizeInput.min, 10) && size <= parseInt(cfg.flagSizeInput.max, 10)) {
-                 cfg.setFlagBaseDisplaySize(size); // Use SETTER
-                 cfg.flagSizeInput.value = String(size);
-             }
-         }
-
+         if (savedFlagSize !== null) { const size = parseInt(savedFlagSize, 10); if (!isNaN(size) && cfg.flagSizeInput && size >= parseInt(cfg.flagSizeInput.min, 10) && size <= parseInt(cfg.flagSizeInput.max, 10)) { cfg.setFlagBaseDisplaySize(size); cfg.flagSizeInput.value = String(size); } }
         const savedDarkMode = localStorage.getItem('mapEditor_darkMode');
-        if (savedDarkMode !== null) {
-            cfg.darkModeToggle.checked = (savedDarkMode === 'true');
-        }
-
-    } catch (e) {
-        console.warn("Could not load settings from localStorage:", e);
-    } finally {
-        // Apply settings AFTER loading attempts (uses loaded values or defaults)
-        // This ensures dark mode class and UI value displays are correct
-        applySettings();
-    }
+        if (savedDarkMode !== null) { if (cfg.darkModeToggle) cfg.darkModeToggle.checked = (savedDarkMode === 'true'); }
+    } catch (e) { console.warn("Could not load settings from localStorage:", e);
+    } finally { applySettings(); }
 }
 
 
 // --- Modals ---
-/** Hides the currently displayed modal and cleans up */
 export function hideModal() {
     if (!cfg.modalOverlay) return;
     cfg.modalOverlay.style.display = 'none';
-
-    // --- Crucial: Detach event listeners to prevent memory leaks ---
     const buttons = [cfg.modalOk, cfg.modalCancel, cfg.modalConfirm, cfg.modalDeny];
     buttons.forEach(btn => { if(btn) btn.onclick = null; });
-
     if(cfg.modalInput) cfg.modalInput.onkeydown = null;
     if(cfg.modalDialog) cfg.modalDialog.onkeydown = null;
-
-    // Resolve the promise if it's still pending (e.g., closed via Esc outside buttons)
     const resolveFunc = cfg.currentModalResolve;
-    cfg.setCurrentModalResolve(null); // Clear the resolve function reference *immediately*
-
-    if (resolveFunc) {
-        resolveFunc(null); // Resolve with null to indicate external closure or cancel
-    }
+    cfg.setCurrentModalResolve(null);
+    if (resolveFunc) { resolveFunc(null); }
 }
 
-/**
- * Shows a modal dialog of a specific type.
- * @param {'alert'|'confirm'|'prompt'} type - The type of modal.
- * @param {string} title - The title of the modal.
- * @param {string} message - The main message content.
- * @param {object} [options={}] - Optional parameters (okText, cancelText, confirmText, denyText, defaultValue, inputType, placeholder).
- * @returns {Promise<boolean|string|null>} - alert: true | confirm: true/false | prompt: string/null
- */
 export function showModal(type, title, message, options = {}) {
     return new Promise((resolve) => {
-        // Ensure all modal elements are available
-        const requiredModalElements = [
-            cfg.modalOverlay, cfg.modalDialog, cfg.modalTitle, cfg.modalMessage,
-            cfg.modalInputContainer, cfg.modalInput, cfg.modalButtons,
-            cfg.modalOk, cfg.modalCancel, cfg.modalConfirm, cfg.modalDeny
-        ];
-        if (requiredModalElements.some(el => !el)) {
-             console.error("Modal elements not found. Cannot show modal.");
-             return resolve(null); // Indicate failure
-        }
+        const requiredModalElements = [ cfg.modalOverlay, cfg.modalDialog, cfg.modalTitle, cfg.modalMessage, cfg.modalInputContainer, cfg.modalInput, cfg.modalButtons, cfg.modalOk, cfg.modalCancel, cfg.modalConfirm, cfg.modalDeny ];
+        if (requiredModalElements.some(el => !el)) { console.error("Modal elements not found. Cannot show modal."); return resolve(null); }
+        if (cfg.currentModalResolve) { console.warn("Modal system busy. Cannot show new modal until previous one is closed."); return resolve(null); }
+        cfg.setCurrentModalResolve(resolve);
 
-        // Prevent multiple modals opening simultaneously
-        if (cfg.currentModalResolve) {
-            console.warn("Modal system busy. Cannot show new modal until previous one is closed.");
-            return resolve(null);
-        }
-        cfg.setCurrentModalResolve(resolve); // Store the resolve function for this modal instance
-
-        // --- Configure Modal Content ---
-        cfg.modalTitle.textContent = title;
-        cfg.modalMessage.textContent = message; // Use textContent for safety, rely on CSS white-space for line breaks
-
-        cfg.modalInputContainer.style.display = 'none'; // Reset input display
-        cfg.modalInput.value = options.defaultValue || ''; // Reset input value
-        cfg.modalInput.type = options.inputType || 'text';
-        cfg.modalInput.placeholder = options.placeholder || '';
-        cfg.modalInput.onkeydown = null; // Clear previous input keydown listener
-
-
-        // Hide all buttons initially
-        cfg.modalOk.style.display = 'none';
-        cfg.modalCancel.style.display = 'none';
-        cfg.modalConfirm.style.display = 'none';
-        cfg.modalDeny.style.display = 'none';
-        cfg.modalDialog.onkeydown = null; // Clear previous dialog keydown listener
-
-        // --- Configure Buttons and Actions based on Type ---
-        let primaryButton = null; // Track which button should get initial focus
+        cfg.modalTitle.textContent = title; cfg.modalMessage.textContent = message;
+        cfg.modalInputContainer.style.display = 'none'; cfg.modalInput.value = options.defaultValue || ''; cfg.modalInput.type = options.inputType || 'text'; cfg.modalInput.placeholder = options.placeholder || ''; cfg.modalInput.onkeydown = null;
+        cfg.modalOk.style.display = 'none'; cfg.modalCancel.style.display = 'none'; cfg.modalConfirm.style.display = 'none'; cfg.modalDeny.style.display = 'none'; cfg.modalDialog.onkeydown = null;
+        let primaryButton = null;
 
         switch (type) {
             case 'alert':
-                cfg.modalOk.textContent = options.okText || 'OK';
-                cfg.modalOk.style.display = 'inline-block';
-                // Wrap resolve logic: call resolve(true) then hideModal
-                cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); };
-                primaryButton = cfg.modalOk;
-                // Handle Enter/Escape key for the whole dialog in alert mode
-                cfg.modalDialog.onkeydown = (e) => {
-                    if (e.key === 'Enter' || e.key === 'Escape') {
-                        e.preventDefault();
-                        cfg.modalOk.click(); // Trigger the OK button's action
-                    }
-                };
-                break;
-
+                cfg.modalOk.textContent = options.okText || 'OK'; cfg.modalOk.style.display = 'inline-block'; cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); }; primaryButton = cfg.modalOk;
+                cfg.modalDialog.onkeydown = (e) => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); cfg.modalOk.click(); } }; break;
             case 'confirm':
-                cfg.modalConfirm.textContent = options.confirmText || 'Yes';
-                cfg.modalDeny.textContent = options.denyText || 'No';
-                cfg.modalConfirm.style.display = 'inline-block';
-                cfg.modalDeny.style.display = 'inline-block';
-                cfg.modalConfirm.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); };
-                cfg.modalDeny.onclick = () => { cfg.currentModalResolve?.(false); hideModal(); };
-                 primaryButton = cfg.modalConfirm;
-                 // Handle Escape key for Deny/Cancel behaviour
-                 cfg.modalDialog.onkeydown = (e) => {
-                     if (e.key === 'Escape') {
-                         e.preventDefault();
-                         cfg.modalDeny.click();
-                     }
-                 };
-                break;
-
+                cfg.modalConfirm.textContent = options.confirmText || 'Yes'; cfg.modalDeny.textContent = options.denyText || 'No'; cfg.modalConfirm.style.display = 'inline-block'; cfg.modalDeny.style.display = 'inline-block';
+                cfg.modalConfirm.onclick = () => { cfg.currentModalResolve?.(true); hideModal(); }; cfg.modalDeny.onclick = () => { cfg.currentModalResolve?.(false); hideModal(); }; primaryButton = cfg.modalConfirm;
+                cfg.modalDialog.onkeydown = (e) => { if (e.key === 'Escape') { e.preventDefault(); cfg.modalDeny.click(); } }; break;
             case 'prompt':
-                cfg.modalInputContainer.style.display = 'block';
-                cfg.modalOk.textContent = options.okText || 'OK';
-                cfg.modalCancel.textContent = options.cancelText || 'Cancel';
-                cfg.modalOk.style.display = 'inline-block';
-                cfg.modalCancel.style.display = 'inline-block';
-                cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(cfg.modalInput.value); hideModal(); };
-                cfg.modalCancel.onclick = () => { cfg.currentModalResolve?.(null); hideModal(); };
-                 primaryButton = cfg.modalInput; // Focus the input field for prompt
-                // Handle Enter key specifically on the input, Escape on the dialog
-                cfg.modalInput.onkeydown = (e) => {
-                     if (e.key === 'Enter') {
-                         e.preventDefault();
-                         cfg.modalOk.click(); // Trigger OK action
-                     }
-                 };
-                 cfg.modalDialog.onkeydown = (e) => {
-                    if (e.key === 'Escape') {
-                        e.preventDefault();
-                        cfg.modalCancel.click(); // Trigger Cancel action
-                    }
-                };
-                break;
-
-            default:
-                 console.error(`Unknown modal type: ${type}`);
-                 // Resolve the promise with null to indicate error and hide
-                 cfg.currentModalResolve?.(null);
-                 hideModal();
-                 return; // Exit promise executor
+                cfg.modalInputContainer.style.display = 'block'; cfg.modalOk.textContent = options.okText || 'OK'; cfg.modalCancel.textContent = options.cancelText || 'Cancel'; cfg.modalOk.style.display = 'inline-block'; cfg.modalCancel.style.display = 'inline-block';
+                cfg.modalOk.onclick = () => { cfg.currentModalResolve?.(cfg.modalInput.value); hideModal(); }; cfg.modalCancel.onclick = () => { cfg.currentModalResolve?.(null); hideModal(); }; primaryButton = cfg.modalInput;
+                cfg.modalInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); cfg.modalOk.click(); } };
+                cfg.modalDialog.onkeydown = (e) => { if (e.key === 'Escape') { e.preventDefault(); cfg.modalCancel.click(); } }; break;
+            default: console.error(`Unknown modal type: ${type}`); cfg.currentModalResolve?.(null); hideModal(); return;
         }
-
-        // Display the modal
         cfg.modalOverlay.style.display = 'flex';
-
-        // Set focus to the primary button or input (use timeout for reliability)
-        if (primaryButton) {
-             setTimeout(() => {
-                 primaryButton.focus();
-                 if (type === 'prompt') primaryButton.select(); // Select text in prompt input
-             }, 0);
-        }
+        if (primaryButton) { setTimeout(() => { if (document.body.contains(primaryButton)) { primaryButton.focus(); if (type === 'prompt') primaryButton.select(); } }, 0); }
     });
 }
 
 // --- Cursor ---
 export function updateCursor() {
     if (!cfg.canvas) return;
-    let cursorStyle = 'crosshair'; // Default: ready to add nation
-
-    if (cfg.isPanningAnimationActive) {
-        cursorStyle = 'default'; // Normal cursor during animation
-    } else if (cfg.isPanning) {
-        cursorStyle = 'grabbing'; // Hand closed while panning
-    } else if (cfg.draggingNation) {
-        cursorStyle = 'grabbing'; // Hand closed while dragging
-    } else if (cfg.hoveredNationIndex !== null) {
-        cursorStyle = 'pointer'; // Pointer finger when hovering over a clickable nation
-    } else if (cfg.potentialPan) {
-        cursorStyle = 'grab'; // Hand open when mousedown starts, potential pan/drag
-    }
-    // If none of the above, it remains 'crosshair'
-
-    // Only update the style if it has actually changed
-    if (cfg.canvas.style.cursor !== cursorStyle) {
-        cfg.canvas.style.cursor = cursorStyle;
-    }
+    let cursorStyle = 'crosshair';
+    if (cfg.isPanningAnimationActive) { cursorStyle = 'default'; }
+    else if (cfg.isPanning) { cursorStyle = 'grabbing'; }
+    else if (cfg.draggingNation) { cursorStyle = 'grabbing'; }
+    else if (cfg.hoveredNationIndex !== null) { cursorStyle = 'pointer'; }
+    else if (cfg.potentialPan) { cursorStyle = 'grab'; }
+    if (cfg.canvas.style.cursor !== cursorStyle) { cfg.canvas.style.cursor = cursorStyle; }
 }
-
-
-// --- END OF FILE js/domUtils.js ---

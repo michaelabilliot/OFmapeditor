@@ -1,4 +1,3 @@
-// --- START OF FILE js/main.js ---
 import * as cfg from './config.js';
 import * as domUtils from './domUtils.js';
 import * as canvasUtils from './canvasUtils.js';
@@ -6,6 +5,8 @@ import * as mapUtils from './mapUtils.js';
 import * as dataUtils from './dataUtils.js';
 import * as nationUtils from './nationUtils.js';
 import * as handlers from './eventHandlers.js';
+// NEW: Import flagEditor module (assuming initFlagEditor function exists)
+import { initFlagEditor } from './flagEditor.js';
 
 /** Initializes the application: assigns elements, loads settings, sets up listeners */
 function initializeApp() {
@@ -15,44 +16,41 @@ function initializeApp() {
     cfg.assignElements();
 
     // 2. Check if essential STATIC elements were found (needed for population)
-    // *** This is the crucial check ***
-    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel || !cfg.topInfoDiv ) {
+    if (!cfg.canvas || !cfg.ctx || !cfg.statusDiv || !cfg.settingsPanel || !cfg.controlsDiv || !cfg.instructionsDiv || !cfg.canvasContainer || !cfg.infoPanel || !cfg.topInfoDiv || !cfg.flagEditorModalContainer ) { // Added check for flag editor container
         console.error("Essential static DOM elements not found! Aborting initialization. Check HTML structure and IDs.", {
              canvas: !!cfg.canvas, ctx: !!cfg.ctx, statusDiv: !!cfg.statusDiv, settingsPanel: !!cfg.settingsPanel,
              controlsDiv: !!cfg.controlsDiv, instructionsDiv: !!cfg.instructionsDiv, canvasContainer: !!cfg.canvasContainer,
-             infoPanel: !!cfg.infoPanel, topInfoDiv: !!cfg.topInfoDiv
+             infoPanel: !!cfg.infoPanel, topInfoDiv: !!cfg.topInfoDiv, flagEditorModalContainer: !!cfg.flagEditorModalContainer
          });
         // Provide a user-friendly error message in the body
         document.body.innerHTML = `<div style="padding: 20px; text-align: center;">
             <h1>Initialization Error</h1>
             <p>Could not start the map editor because some essential HTML elements are missing.</p>
-            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel', 'top-info' etc.</p>
+            <p>Please ensure the HTML file is correct and includes elements with IDs like 'mapCanvas', 'controls', 'settingsPanel', 'info-panel', 'top-info', 'flagEditorModalContainer' etc.</p>
             <p>Check the browser console (F12) for more details.</p>
             </div>`;
         return; // Stop initialization
     }
 
     // 3. Populate dynamic HTML content (controls, instructions, settings)
-    //    This requires the container elements (e.g., cfg.settingsPanel) to be assigned.
     domUtils.populateDynamicElements();
+    // NEW: Initialize the Flag Editor modal structure
+    initFlagEditor(); // Call initialization function from flagEditor.js
 
     // 4. Assign references AGAIN to capture the DYNAMICALLY added elements
-    //    This finds elements created in step 3 (buttons, inputs inside panels).
     cfg.assignElements();
 
     // 5. Check if essential DYNAMIC elements were found (optional but good practice)
-    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.zoomInButton) {
+    if (!cfg.loadMapLabel || !cfg.saveButton || !cfg.markerSizeInput || !cfg.zoomInButton || !cfg.editFlagButton) { // Added check for editFlagButton
          console.warn("Some dynamic UI elements might be missing after population. Check populateDynamicElements() and resulting HTML IDs.");
          // Decide if this is critical enough to abort or just warn
     }
 
 
     // 6. Load settings (theme, sizes) from localStorage and apply them
-    //    This requires the settings input elements to be assigned.
     domUtils.loadSettings(); // This also calls applySettings inside
 
     // 7. Setup all event listeners for user interaction
-    //    This requires all button/input/canvas elements to be assigned.
     setupEventListeners();
 
     // 8. Set initial UI states
@@ -170,6 +168,9 @@ function setupEventListeners() {
     // Listener on the hidden input, triggered by label click
     cfg.infoFlagUploadInput?.addEventListener('change', handlers.handleFlagUploadChange);
     cfg.infoFlagRemoveButton?.addEventListener('click', handlers.handleFlagRemoveClick);
+    // NEW: Listener for Flag Editor Button
+    cfg.editFlagButton?.addEventListener('click', handlers.handleFlagEditorClick);
+
 
     // Global Keyboard Listener (attached to document)
     document.addEventListener('keydown', handlers.handleDocumentKeyDown);

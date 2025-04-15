@@ -39,6 +39,11 @@
     --panel-width-instructions: 220px; /* Define panel widths */
     --panel-width-info: 240px;
     --layout-gap: 10px;
+
+    /* Flag Editor Layout/Effect Variables (Colors removed) */
+    --fe-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --fe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --fe-fixed-radius: 8px; /* Used for border-radius */
 }
 
 body.dark-mode {
@@ -95,30 +100,24 @@ body {
     box-sizing: border-box;
     position: relative;
     transition: background-color 0.3s, color 0.3s;
-    /* Remove body padding, handle spacing via grid */
     padding: 0;
-    /* Let main-container handle height */
-    height: 100vh; /* Full viewport height */
-    display: flex; /* Keep body as flex container for main */
+    height: 100vh;
+    display: flex;
     flex-direction: column;
 }
 
-/* --- New CSS Grid Layout for #main-container --- */
+/* --- CSS Grid Layout for #main-container --- */
 #main-container {
-    flex-grow: 1; /* Take remaining space from body */
+    flex-grow: 1;
     width: 100%;
     display: grid;
-    /* Rows: Title, Controls, Status, Main Content Area */
-    grid-template-rows: auto auto auto 1fr; /* Auto height for headers, 1fr for content */
-    /* Columns: Instructions, Canvas, Info Panel */
+    grid-template-rows: auto auto auto 1fr;
     grid-template-columns: var(--panel-width-instructions) 1fr var(--panel-width-info);
     gap: var(--layout-gap);
-    padding: var(--layout-gap); /* Padding around the entire grid */
-    box-sizing: border-box; /* Include padding in size */
-    overflow: hidden; /* Prevent container overflow */
-    height: 100%; /* Ensure it uses the body's flex height */
-
-    /* Define grid areas for easier placement */
+    padding: var(--layout-gap);
+    box-sizing: border-box;
+    overflow: hidden;
+    height: 100%;
     grid-template-areas:
         "title     title     title"
         "controls  controls  controls"
@@ -128,15 +127,15 @@ body {
 
 /* Assign elements to grid areas */
 #main-title { grid-area: title; text-align: center; margin: 0 0 5px 0; font-size: 1.4em; }
-#controls { grid-area: controls; justify-content: center; max-width: none; width: 100%; margin-bottom: 0;} /* Full width */
-#top-info { grid-area: top-info; max-width: none; width: 100%; margin-bottom: 0; } /* Full width */
+#controls { grid-area: controls; justify-content: center; max-width: none; width: 100%; margin-bottom: 0;}
+#top-info { grid-area: top-info; max-width: none; width: 100%; margin-bottom: 0; }
 #instructions { grid-area: instr; }
 #canvas-container { grid-area: canvas; }
 #info-panel { grid-area: info; }
 
 /* --- Adjustments for elements within the Grid --- */
 
-/* Controls Bar - Already full width */
+/* Controls Bar */
 #controls {
     background-color: var(--panel-bg-color);
     color: var(--text-color);
@@ -166,7 +165,7 @@ input[type="file"].visually-hidden { position: absolute; width: 1px; height: 1px
 #zoomDisplay { font-size: 0.9em; min-width: 45px; text-align: center; background-color: rgba(0,0,0,0.05); padding: 3px 5px; border-radius: 3px; font-family: monospace; user-select: none; }
 body.dark-mode #zoomDisplay { background-color: rgba(255,255,255,0.1); }
 
-/* Status & Coordinate Display - Already full width */
+/* Status & Coordinate Display */
 #top-info {
     display: flex;
     justify-content: space-between;
@@ -183,7 +182,6 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
 
 /* Instructions Panel */
 #instructions {
-    /* Grid placement handled by grid-area */
     font-size: 0.85em;
     color: var(--text-color);
     background-color: var(--panel-bg-color);
@@ -193,10 +191,10 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: left;
     transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    overflow-y: auto; /* Allow vertical scroll if content overflows */
-    height: 100%; /* Take full height of grid row */
+    overflow-y: auto;
+    height: 100%;
     box-sizing: border-box;
-    display: flex; /* Allow internal flex layout if needed */
+    display: flex;
     flex-direction: column;
 }
 #instructions h3 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
@@ -206,35 +204,31 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
 
 /* Canvas Container */
 #canvas-container {
-    /* Grid placement handled by grid-area */
-    /* flex: 1 1 auto; Removed flex */
-    background-color: var(--input-bg-color); /* BG color now on container */
+    background-color: var(--input-bg-color);
     display: flex;
     justify-content: center;
     align-items: center;
     border: 1px solid var(--border-color);
-    overflow: hidden; /* Crucial: prevent canvas overflow */
-    position: relative; /* For positioning inline editor */
-    min-width: 100px; /* Min width */
-    min-height: 200px; /* Min height */
-    height: 100%; /* Take full height of grid row */
+    overflow: hidden;
+    position: relative;
+    min-width: 100px;
+    min-height: 200px;
+    height: 100%;
     box-sizing: border-box;
 }
 #mapCanvas {
     display: block;
-    /* background-color: var(--input-bg-color); BG now on container */
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    max-width: 100%; /* Ensure canvas doesn't exceed container */
+    max-width: 100%;
     max-height: 100%;
     outline: none;
 }
 
 /* Info Panel */
 #info-panel {
-    /* Grid placement handled by grid-area */
     font-size: 0.9em;
     color: var(--text-color);
     background-color: var(--panel-bg-color);
@@ -247,13 +241,12 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
     height: 100%;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* Stack content vertically */
-    overflow: hidden; /* Prevent panel content overflow */
+    flex-direction: column;
+    overflow: hidden;
 }
 #info-panel h3 { margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; flex-shrink: 0; }
-#info-content { flex-shrink: 0; margin-bottom: 10px; overflow-y: auto; /* Allow scrolling just for this part if needed */ }
+#info-content { flex-shrink: 0; margin-bottom: 10px; overflow-y: auto; }
 #info-panel p { margin: 8px 0; word-wrap: break-word; }
-#info-panel strong { }
 #info-placeholder { font-style: italic; opacity: 0.7; font-size: 0.9em; margin-top: 15px; }
 #info-panel span#info-name, #info-panel span#info-strength { color: var(--link-color); font-weight: bold; }
 #info-panel hr { border: none; border-top: 1px solid var(--hr-color); margin: 10px 0; flex-shrink: 0; }
@@ -263,24 +256,47 @@ body.dark-mode #status.error { background-color: rgba(255, 80, 80, 0.2); }
 #info-flag-container { margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
 #info-flag-preview { max-width: 150px; max-height: 150px; width: auto; height: auto; border: 1px solid var(--info-flag-border); background-color: var(--info-flag-bg); object-fit: contain; display: none; }
 #info-flag-status { font-size: 0.85em; color: var(--info-status-color); font-style: italic; text-align: center; display: none; word-break: break-all; padding: 5px; background-color: var(--info-flag-bg); border: 1px dashed var(--info-flag-border); border-radius: 4px; width: 90%; box-sizing: border-box; }
-#info-flag-controls { display: flex; gap: 8px; width: 100%; justify-content: center; }
-#info-flag-upload-label { flex-grow: 1; max-width: 150px; }
-#info-flag-remove-button { padding: 5px 8px; font-size: 0.85em; background-color: var(--button-danger-bg-color); color: var(--button-danger-text-color); border: none; border-radius: 4px; cursor: pointer; line-height: normal; }
+#info-flag-controls { display: flex; gap: 8px; width: 100%; justify-content: center; flex-wrap: wrap; }
+#info-flag-upload-label { flex-basis: calc(50% - 4px); max-width: 150px; }
+#info-flag-remove-button { padding: 5px 8px; font-size: 0.85em; background-color: var(--button-danger-bg-color); color: var(--button-danger-text-color); border: none; border-radius: 4px; cursor: pointer; line-height: normal; flex-shrink: 0; }
 #info-flag-remove-button:hover:not(:disabled) { opacity: 0.9; }
 #info-flag-remove-button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
+.btn-secondary-small {
+    padding: 5px 8px;
+    font-size: 0.85em;
+    background-color: var(--button-secondary-bg-color);
+    color: var(--button-secondary-text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: normal;
+    flex-shrink: 0;
+    text-align: center;
+    user-select: none;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+.btn-secondary-small:hover:not(:disabled) { opacity: 0.9; background-color: var(--button-secondary-bg-color); }
+.btn-secondary-small:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); background-color: var(--button-secondary-bg-color); }
+#editFlagButton {
+    flex-basis: calc(50% - 4px);
+    max-width: 150px;
+    padding: 8px 12px; /* Increased padding */
+    font-size: 0.9em;  /* Increased font size */
+}
+
 
 /* Nation List (within Info Panel) */
 #nationListContainer {
     width: 100%;
-    overflow-y: auto; /* Enable vertical scroll */
+    overflow-y: auto;
     border: 1px solid var(--border-color);
     background-color: var(--input-bg-color);
     padding: 8px;
     border-radius: 5px;
     margin-top: 0;
     box-sizing: border-box;
-    flex-grow: 1; /* Take remaining vertical space in info panel */
-    min-height: 50px; /* Ensure it's visible even when empty */
+    flex-grow: 1;
+    min-height: 50px;
     transition: background-color 0.3s, border-color 0.3s;
 }
 body.dark-mode #nationListContainer { background-color: var(--input-bg-color); }
@@ -295,7 +311,7 @@ body.dark-mode #nationList li.selected-list-item { color: var(--button-primary-t
 body.dark-mode .delete-nation { color: var(--highlight-color); }
 body.dark-mode .delete-nation:hover { color: #ffaaaa; }
 
-/* Inline Edit Panel (Position relative to canvas-container) */
+/* Inline Edit Panel */
 #inlineEditPanel { display: none; position: absolute; background-color: var(--panel-bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; box-shadow: 0 3px 8px rgba(0,0,0,0.2); z-index: 100; width: 220px; box-sizing: border-box; }
 #inlineEditPanel label { display: block; margin-bottom: 3px; font-size: 0.9em; font-weight: bold; }
 #inlineEditPanel input { width: 100%; margin-bottom: 10px; padding: 5px; border: 1px solid var(--input-border-color); background-color: var(--input-bg-color); color: var(--text-color); border-radius: 4px; box-sizing: border-box; font-size: 0.95em; }
@@ -306,9 +322,9 @@ body.dark-mode .delete-nation:hover { color: #ffaaaa; }
 #inlineEditCancel { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
 
 /* Settings Panel & Button */
-#settingsButton { position: fixed; /* Fixed relative to viewport */ top: 10px; right: 10px; padding: 8px 10px; font-size: 1.2em; z-index: 1001; background-color: var(--button-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; line-height: 1; }
+#settingsButton { position: fixed; top: 10px; right: 10px; padding: 8px 10px; font-size: 1.2em; z-index: 1001; background-color: var(--button-bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; line-height: 1; }
 #settingsButton:hover { background-color: var(--button-hover-bg-color); }
-#settingsPanel { display: none; position: fixed; top: 50px; /* Position below button */ right: 10px; width: 250px; background-color: var(--panel-bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; color: var(--text-color); transition: background-color 0.3s, border-color 0.3s; box-sizing: border-box; }
+#settingsPanel { display: none; position: fixed; top: 50px; right: 10px; width: 250px; background-color: var(--panel-bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; color: var(--text-color); transition: background-color 0.3s, border-color 0.3s; box-sizing: border-box; }
 #settingsPanel h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
 .setting-item { margin-bottom: 15px; }
 .setting-item label:not(.toggle-switch) { display: block; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; }
@@ -338,11 +354,11 @@ input:checked + .slider:before { transform: translateX(20px); }
 #modal-ok:hover, #modal-confirm:hover { opacity: 0.9; }
 #modal-cancel:hover, #modal-deny:hover { opacity: 0.9; }
 
-/* Media Queries (Optional - Adjust Grid for smaller screens if needed) */
-@media (max-width: 800px) { /* Example breakpoint */
+/* Media Queries */
+@media (max-width: 800px) {
     #main-container {
-        grid-template-columns: 1fr; /* Stack columns */
-        grid-template-rows: auto auto auto auto 1fr auto; /* Adjust rows */
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto 1fr auto;
         grid-template-areas:
             "title"
             "controls"
@@ -350,22 +366,272 @@ input:checked + .slider:before { transform: translateX(20px); }
             "instr"
             "canvas"
             "info";
-        overflow-y: auto; /* Allow scrolling on small screens */
-        height: auto; /* Let content determine height */
+        overflow-y: auto;
+        height: auto;
     }
-     body { height: auto; } /* Allow body to grow */
+     body { height: auto; }
 
     #instructions, #info-panel {
-        height: 250px; /* Give panels fixed height when stacked */
-        width: 100%; /* Full width */
+        height: 250px;
+        width: 100%;
     }
     #canvas-container {
-        min-height: 40vh; /* Ensure canvas has reasonable height */
+        min-height: 40vh;
         width: 100%;
     }
      #settingsPanel {
         width: 90%;
         max-width: 300px;
-        right: 5%; /* Center it more */
+        right: 5%;
      }
+     #info-flag-upload-label, #editFlagButton { flex-basis: 100%; max-width: none; }
+     #info-flag-remove-button { flex-basis: auto; }
 }
+
+/* ------------- Flag Editor Styles (Using Main App Variables) ------------- */
+
+#flagEditorModalContainer {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--modal-overlay-bg);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+#flagEditorModalContent {
+    background-color: var(--panel-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--fe-fixed-radius, 8px);
+    box-shadow: var(--fe-shadow-lg);
+    padding: 1.5rem;
+    max-width: 1100px;
+    width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* --- Base Styles (Scoped) --- */
+#flagEditorModalContainer * {
+    margin: 0; padding: 0; box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+/* --- Header (Scoped) --- */
+#flagEditorModalContainer h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: var(--link-color);
+    text-align: center;
+}
+#flagEditorModalContainer .fe-subheading {
+    color: var(--text-color);
+    opacity: 0.8;
+    font-size: 0.9rem;
+    max-width: 700px;
+    margin: 0 auto 1.5rem auto;
+    text-align: center;
+}
+
+/* --- Buttons (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background-color: var(--button-primary-bg-color);
+    color: var(--button-primary-text-color);
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--fe-fixed-radius, 6px);
+    border: 1px solid transparent;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--fe-shadow);
+    text-decoration: none; white-space: nowrap;
+}
+#flagEditorModalContainer .btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px); box-shadow: var(--fe-shadow-lg);
+}
+#flagEditorModalContainer .btn:active:not(:disabled) { transform: translateY(0px); box-shadow: var(--fe-shadow); }
+#flagEditorModalContainer .btn:disabled {
+    background-color: var(--button-bg-color) !important;
+    color: var(--text-color) !important;
+    opacity: var(--disabled-opacity) !important;
+    cursor: not-allowed !important; box-shadow: none !important;
+    transform: none !important;
+    border-color: var(--border-color) !important;
+}
+#flagEditorModalContainer .btn-secondary {
+    background-color: var(--button-secondary-bg-color);
+    color: var(--button-secondary-text-color);
+    border-color: var(--button-secondary-bg-color);
+}
+#flagEditorModalContainer .btn-secondary:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9; }
+#flagEditorModalContainer .btn-danger {
+    background-color: var(--button-danger-bg-color);
+    color: var(--button-danger-text-color);
+    border-color: var(--button-danger-bg-color);
+}
+#flagEditorModalContainer .btn-danger:hover:not(:disabled) { background-color: var(--button-danger-bg-color); opacity: 0.9; }
+
+/* --- Progress Bar (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer .progress-container { margin: 1.5rem 0; display: none; text-align: left; }
+#flagEditorModalContainer .progress-label { font-size: 0.9rem; color: var(--text-color); opacity: 0.8; margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
+#flagEditorModalContainer .progress-bar { height: 8px; background-color: var(--input-bg-color); border: 1px solid var(--input-border-color); border-radius: 4px; overflow: hidden; }
+#flagEditorModalContainer .progress { height: 100%; background-color: var(--link-color); width: 0%; transition: width 0.4s ease; border-radius: 4px; }
+#flagEditorModalContainer .completion-message { display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-color); font-weight: 600; font-size: 1rem; margin-top: 0.5rem; }
+#flagEditorModalContainer .checkmark { color: var(--link-color); font-size: 1.2rem; }
+
+/* --- Options Panel (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer .options-panel {
+    background-color: var(--panel-bg-color);
+    border-radius: var(--fe-fixed-radius, 8px);
+    box-shadow: var(--fe-shadow);
+    padding: 1.5rem; margin-bottom: 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+#flagEditorModalContainer .option-group { display: flex; align-items: center; gap: 0.75rem; min-height: 38px; }
+#flagEditorModalContainer .option-label { color: var(--text-color); opacity: 0.9; font-weight: 500; font-size: 0.95rem; white-space: nowrap; }
+
+/* Select Dropdown (Scoped & Using Main Vars) */
+#flagEditorModalContainer .select {
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--fe-fixed-radius, 6px);
+    padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-appearance: none; appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Default gray */
+    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
+    padding-right: 2.5rem; min-height: 38px;
+}
+body.dark-mode #flagEditorModalContainer .select {
+     background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Lighter gray for dark */
+}
+#flagEditorModalContainer .select:hover { border-color: var(--link-color); }
+#flagEditorModalContainer .select:focus { outline: none; border-color: var(--link-color); box-shadow: 0 0 0 2px var(--link-color); }
+/* Apply select styles specifically to the preprocess dropdown too */
+#flagEditorModalContainer #fe-preprocessModeSelect {
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--fe-fixed-radius, 6px);
+    padding: 0.4rem 0.8rem; font-size: 0.95rem; cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-appearance: none; appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat; background-position: right 0.5rem center; background-size: 1.2em;
+    padding-right: 2.5rem; min-height: 38px;
+}
+body.dark-mode #flagEditorModalContainer #fe-preprocessModeSelect {
+     background-image: url('data:image/svg+xml;utf8,<svg fill="%23cccccc" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+}
+#flagEditorModalContainer #fe-preprocessModeSelect:hover { border-color: var(--link-color); }
+#flagEditorModalContainer #fe-preprocessModeSelect:focus { outline: none; border-color: var(--link-color); box-shadow: 0 0 0 2px var(--link-color); }
+
+/* --- Images Container (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer .images-container { display: block; margin-bottom: 1.5rem; background-color: transparent; padding: 0; border-radius: 0; box-shadow: none; }
+#flagEditorModalContainer .split-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+#flagEditorModalContainer .panel {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 0.75rem; border-radius: var(--fe-fixed-radius, 8px);
+    display: flex; flex-direction: column; min-height: 250px;
+}
+#flagEditorModalContainer .panel-title { font-size: 0.9rem; color: var(--text-color); opacity: 0.8; margin-bottom: 0.5rem; font-weight: 500; text-align: center; }
+#flagEditorModalContainer .image-preview { flex-grow: 1; display: flex; align-items: center; justify-content: center; background-color: var(--input-bg-color); border-radius: var(--fe-fixed-radius, 6px); overflow: hidden; min-height: 200px; border: 1px solid var(--border-color); }
+#flagEditorModalContainer .preview-image { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+
+/* --- Manual Crop Button (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer #fe-manualCropControls { text-align: center; margin: 0.5rem 0 1rem 0; }
+#flagEditorModalContainer #fe-manualCropStatus { font-size: 0.85rem; color: var(--text-color); opacity: 0.7; margin-left: 1em; }
+#flagEditorModalContainer #fe-defineCropBtn { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
+#flagEditorModalContainer #fe-defineCropBtn:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9;}
+
+
+/* --- Loading Overlay (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer #fe-loadingOverlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(3px); display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; color: var(--text-color);
+    font-size: 1rem; border-radius: var(--fe-fixed-radius, 8px);
+}
+#flagEditorModalContainer .spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--link-color);
+    animation: fe-spin 1s ease-in-out infinite; margin-bottom: 1rem;
+}
+#flagEditorModalContainer .loading-text { font-weight: 500; }
+@keyframes fe-spin { to { transform: rotate(360deg); } }
+
+/* --- Crop Modal (Inner Modal, Scoped & Using Main Vars) --- */
+#fe-cropModalInner {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px); z-index: 4000;
+    display: none; align-items: center; justify-content: center; padding: 1rem;
+}
+#fe-cropModalInner .crop-modal-content {
+    background-color: var(--panel-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem; border-radius: var(--fe-fixed-radius, 8px);
+    box-shadow: var(--fe-shadow-lg); max-width: 90vw; max-height: 90vh;
+    display: flex; flex-direction: column;
+}
+#fe-cropModalInner .crop-image-container {
+    width: 100%; max-height: calc(80vh - 100px); overflow: hidden; margin-bottom: 1rem;
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--border-color);
+}
+#fe-cropModalInner .crop-image-container img { display: block; max-width: 100%; max-height: 100%; }
+#fe-cropModalInner .crop-modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+/* Cropper.js specific styles (Using main vars) */
+#fe-cropModalInner .cropper-view-box { outline: 1px solid var(--link-color); opacity: 0.8;}
+#fe-cropModalInner .cropper-face { background-color: var(--link-color); opacity: 0.1; }
+#fe-cropModalInner .cropper-dashed { border-color: var(--border-color) !important; opacity: 0.5 !important;}
+#fe-cropModalInner .cropper-point { background-color: var(--link-color) !important; opacity: 0.8 !important; }
+#fe-cropModalInner .cropper-line { background-color: var(--link-color) !important; opacity: 0.8 !important;}
+
+/* --- Final Apply/Cancel Buttons (Scoped & Using Main Vars) --- */
+#flagEditorModalContainer .final-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+#flagEditorModalContainer #fe-applyButton { background-color: var(--button-primary-bg-color); color: var(--button-primary-text-color); border-color: var(--button-primary-bg-color); }
+#flagEditorModalContainer #fe-cancelButton { background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border-color: var(--button-secondary-bg-color); }
+#flagEditorModalContainer #fe-applyButton:hover:not(:disabled) { background-color: var(--button-primary-bg-color); opacity: 0.9; }
+#flagEditorModalContainer #fe-cancelButton:hover:not(:disabled) { background-color: var(--button-secondary-bg-color); opacity: 0.9; }
+
+
+/* Responsive adjustments for Flag Editor Modal Content */
+@media (max-width: 768px) {
+    #flagEditorModalContainer .options-panel { flex-direction: column; align-items: stretch; gap: 1rem; }
+    #flagEditorModalContainer .option-group { justify-content: space-between; }
+    #fe-cropModalInner .crop-modal-content { padding: 1rem; }
+    #fe-cropModalInner .crop-modal-actions { justify-content: center; }
+    #flagEditorModalContainer .final-actions { justify-content: center; }
+}
+ @media (max-width: 480px) {
+    #flagEditorModalContainer .option-group { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    #flagEditorModalContainer .option-label { margin-bottom: 0.25rem; }
+    #fe-cropModalInner .crop-modal-actions .btn { width: 100%; justify-content: center; }
+    #fe-cropModalInner .crop-modal-actions { flex-direction: column; }
+    #flagEditorModalContainer .final-actions { flex-direction: column; }
+    #flagEditorModalContainer .final-actions .btn { width: 100%; }
+ }
