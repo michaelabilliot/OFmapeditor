@@ -7,7 +7,7 @@ import * as nationUtils from './nationUtils.js';
 import * as handlers from './eventHandlers.js';
 import { initFlagEditor } from './flagEditor.js';
 // *** ADDED: Import Full Flag Editor initialization ***
-import { initFullFlagEditor } from './fullFlagEditor.js';
+import { initFullFlagEditor } from './fullflagEditor.js';
 
 // *** ADDED: View switching elements ***
 let mapEditorView = null;
