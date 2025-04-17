@@ -1,31 +1,30 @@
+// --- START OF FILE config.js ---
+
 // --- DOM Elements (will be assigned in main.js) ---
 export let canvas, canvasContainer, ctx;
-// MODIFIED: Removed zoom buttons/display from controls elements
-export let imageInput, loadMapLabel, jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton; // zoomInButton, zoomOutButton, zoomResetButton, zoomDisplay removed
+export let generateMapButton, paramSeed, paramWidth, paramHeight, paramNumFaults, paramSmoothingIterations, paramNoiseSeed, paramNoiseOctaves, paramNoisePersistence, paramNoiseLacunarity, paramNoiseScale, paramNoiseStrength, paramEnableSymmetry; // Generation UI elements
+export let jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton;
 export let statusDiv, coordinateDisplay, nationListContainer, nationListUl, nationListCountSpan, settingsButton, settingsPanel;
 export let closeSettingsButton, markerSizeInput, markerSizeValue, darkModeToggle, nationTextSizeInput, nationTextSizeValue, flagSizeInput, flagSizeValue;
 export let inlineEditPanel, inlineEditName, inlineEditStrength, inlineEditSave, inlineEditCancel;
 export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
-// NEW: Flag Editor Elements
 export let editFlagButton, flagEditorModalContainer;
 
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
-export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
-// MODIFIED: Added top row containers
-export let instrTopContainer, canvasTopContainer, infoTopContainer; // Replaced topInfoDiv
+export let controlsDiv, instructionsDiv, infoPanel;
+export let instrTopContainer, canvasTopContainer, infoTopContainer;
 
 // --- State Variables ---
 let _markerRadius = 8;
 let _nationTextSize = 12;
 let _flagBaseDisplaySize = 30;
-export let nations = []; // { coordinates: [x, y], name: "", strength: 0, flag: "base_name" | null, flagImage: Image | null, flagData: string | null, flagDataType: 'svg' | 'png' | 'jpeg' | 'gif' | 'webp' | null, flagWidth: number | null, flagHeight: number | null }
+export let nations = [];
 export let mapImage = null; // Holds the *colorized* map image
-export let mapInfo = { name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" };
+export let mapInfo = { name: "Generated Map", width: 0, height: 0, fileName: "generated_map.png", fileType: "image/png" };
 export let selectedNationIndex = null;
 export let hoveredNationIndex = null;
 export let hoveredListIndex = null;
-// MODIFIED: Default settings visibility to false
 export let isSettingsVisible = false;
 export let nationIndexBeingEdited = null;
 export let zoom = 1.0;
@@ -33,7 +32,7 @@ export let offsetX = 0;
 export let offsetY = 0;
 export const minZoom = 0.05;
 export const maxZoom = 25.0;
-export const zoomSensitivity = 0.0005; // Reduced sensitivity
+export const zoomSensitivity = 0.0005;
 export let isPanning = false;
 export let draggingNation = false;
 export let potentialPan = false;
@@ -43,15 +42,35 @@ export let dragNationOffset = { x: 0, y: 0 };
 export const panThreshold = 5;
 export let currentModalResolve = null;
 export let isPanningAnimationActive = false;
+export let isGeneratingMap = false; // Flag to prevent concurrent generation
 
-// --- Getters for state variables that need setters ---
+// --- Default Generation Parameters ---
+export const defaultGenParams = {
+    seed: 12345,
+    width: 512,
+    height: 512,
+    numFaults: 200,
+    enableSymmetry: true,
+    smoothing: {
+        iterations: 1,
+    },
+    noise: {
+        seed: 54321,
+        octaves: 6,
+        persistence: 0.5,
+        lacunarity: 2.0,
+        scale: 150,
+        strength: 0.1
+    }
+};
+
+// --- Getters ---
 export const markerRadius = () => _markerRadius;
 export const nationTextSize = () => _nationTextSize;
 export const flagBaseDisplaySize = () => _flagBaseDisplaySize;
 
-// --- Function to assign elements after DOM load ---
+// --- Assign Elements ---
 export function assignElements() {
-    // Assign static layout containers first
     canvas = document.getElementById('mapCanvas');
     canvasContainer = document.getElementById('canvas-container');
     settingsButton = document.getElementById('settingsButton');
@@ -61,12 +80,9 @@ export function assignElements() {
     statusDiv = document.getElementById('status');
     instructionsDiv = document.getElementById('instructions');
     infoPanel = document.getElementById('info-panel');
-    // MODIFIED: Assign new top row containers
     instrTopContainer = document.getElementById('instr-top-container');
     canvasTopContainer = document.getElementById('canvas-top-container');
     infoTopContainer = document.getElementById('info-top-container');
-
-    // Assign interactive elements that exist in base HTML
     inlineEditPanel = document.getElementById('inlineEditPanel');
     inlineEditName = document.getElementById('inlineEditName');
     inlineEditStrength = document.getElementById('inlineEditStrength');
@@ -80,10 +96,8 @@ export function assignElements() {
     infoFlagUploadInput = document.getElementById('info-flag-upload-input');
     infoFlagUploadLabel = document.getElementById('info-flag-upload-label');
     infoFlagRemoveButton = document.getElementById('info-flag-remove-button');
-    // NEW: Flag Editor elements
     editFlagButton = document.getElementById('editFlagButton');
     flagEditorModalContainer = document.getElementById('flagEditorModalContainer');
-
     nationListContainer = document.getElementById('nationListContainer');
     nationListUl = document.getElementById('nationList');
     nationListCountSpan = document.getElementById('nationListCount');
@@ -98,23 +112,26 @@ export function assignElements() {
     modalCancel = document.getElementById('modal-cancel');
     modalConfirm = document.getElementById('modal-confirm');
     modalDeny = document.getElementById('modal-deny');
-
-    // Get canvas context if canvas exists
     ctx = canvas ? canvas.getContext('2d') : null;
-
-    // Assign elements dynamically added by populateDynamicElements
-    // These might be null on the first call in main.js
-    imageInput = document.getElementById('mapImageInput');
-    loadMapLabel = document.getElementById('loadMapLabel');
+    // Generation elements
+    generateMapButton = document.getElementById('generateMapButton');
+    paramSeed = document.getElementById('paramSeed');
+    paramWidth = document.getElementById('paramWidth');
+    paramHeight = document.getElementById('paramHeight');
+    paramNumFaults = document.getElementById('paramNumFaults');
+    paramEnableSymmetry = document.getElementById('paramEnableSymmetry');
+    paramSmoothingIterations = document.getElementById('paramSmoothingIterations');
+    paramNoiseSeed = document.getElementById('paramNoiseSeed');
+    paramNoiseOctaves = document.getElementById('paramNoiseOctaves');
+    paramNoisePersistence = document.getElementById('paramNoisePersistence');
+    paramNoiseLacunarity = document.getElementById('paramNoiseLacunarity');
+    paramNoiseScale = document.getElementById('paramNoiseScale');
+    paramNoiseStrength = document.getElementById('paramNoiseStrength');
+    // Other controls
     jsonLoadInput = document.getElementById('jsonLoadInput');
     jsonLoadLabel = document.getElementById('jsonLoadLabel');
     saveButton = document.getElementById('saveButton');
     loadFlagsButton = document.getElementById('loadFlagsButton');
-    // Zoom buttons are now static in HTML, assign them here if needed elsewhere
-    // zoomInButton = document.getElementById('zoomInButton');
-    // zoomOutButton = document.getElementById('zoomOutButton');
-    // zoomResetButton = document.getElementById('zoomResetButton');
-    // zoomDisplay = document.getElementById('zoomDisplay');
     closeSettingsButton = document.getElementById('closeSettingsButton');
     markerSizeInput = document.getElementById('markerSizeInput');
     markerSizeValue = document.getElementById('markerSizeValue');
@@ -125,7 +142,7 @@ export function assignElements() {
     flagSizeValue = document.getElementById('flagSizeValue');
 }
 
-// --- State Modifiers (Setters) ---
+// --- Setters ---
 export function setMarkerRadius(value) { _markerRadius = value; }
 export function setNationTextSize(value) { _nationTextSize = value; }
 export function setFlagBaseDisplaySize(value) { _flagBaseDisplaySize = value; }
@@ -148,3 +165,6 @@ export function setDragNationOffset(offset) { dragNationOffset = offset; }
 export function setCurrentModalResolve(resolveFn) { currentModalResolve = resolveFn; }
 export function setIsPanningAnimationActive(state) { isPanningAnimationActive = state; }
 export function setIsSettingsVisible(state) { isSettingsVisible = state; }
+export function setIsGeneratingMap(state) { isGeneratingMap = state; }
+
+// --- END OF FILE config.js ---
