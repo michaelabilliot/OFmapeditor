@@ -41,7 +41,7 @@ function initializeApp() {
     cfg.assignElements();
 
     // 5. Check essential dynamic elements
-    if (!cfg.generateMapButton || !cfg.saveButton || !cfg.markerSizeInput || !cfg.editFlagButton) {
+    if (!cfg.generateMapButton || !cfg.saveButton || !cfg.markerSizeInput || !cfg.editFlagButton || !cfg.paramSeedRandomizeButton || !cfg.paramWaterLevel) { // Added checks
          console.warn("Some dynamic UI elements might be missing after population.");
     }
 
@@ -105,6 +105,14 @@ function setupEventListeners() {
     cfg.jsonLoadInput?.addEventListener('change', handlers.handleJsonFileSelect);
     cfg.loadFlagsButton?.addEventListener('click', dataUtils.promptAndLoadFlags);
     cfg.saveButton?.addEventListener('click', dataUtils.saveProjectAsZip);
+    // Add listener for Randomize Seed button
+    cfg.paramSeedRandomizeButton?.addEventListener('click', () => {
+        if (cfg.paramSeed) {
+            // Generate a reasonably large positive integer seed
+            cfg.paramSeed.value = Math.floor(Math.random() * 2147483647); // Max 32-bit signed int value
+        }
+    });
+
 
     // Static Zoom Controls
     document.getElementById('zoomInButton')?.addEventListener('click', () => canvasUtils.changeZoom(1.25));

@@ -2,7 +2,8 @@
 
 // --- DOM Elements (will be assigned in main.js) ---
 export let canvas, canvasContainer, ctx;
-export let generateMapButton, paramSeed, paramWidth, paramHeight, paramNumFaults, paramSmoothingIterations, paramNoiseSeed, paramNoiseOctaves, paramNoisePersistence, paramNoiseLacunarity, paramNoiseScale, paramNoiseStrength, paramEnableSymmetry; // Generation UI elements
+// Added paramWaterLevel, paramSeedRandomizeButton
+export let generateMapButton, paramSeed, paramWidth, paramHeight, paramNumFaults, paramSmoothingIterations, paramNoiseSeed, paramNoiseOctaves, paramNoisePersistence, paramNoiseLacunarity, paramNoiseScale, paramNoiseStrength, paramEnableSymmetry, paramWaterLevel, paramSeedRandomizeButton; // Generation UI elements
 export let jsonLoadInput, jsonLoadLabel, saveButton, loadFlagsButton;
 export let statusDiv, coordinateDisplay, nationListContainer, nationListUl, nationListCountSpan, settingsButton, settingsPanel;
 export let closeSettingsButton, markerSizeInput, markerSizeValue, darkModeToggle, nationTextSizeInput, nationTextSizeValue, flagSizeInput, flagSizeValue;
@@ -44,23 +45,24 @@ export let currentModalResolve = null;
 export let isPanningAnimationActive = false;
 export let isGeneratingMap = false; // Flag to prevent concurrent generation
 
-// --- Default Generation Parameters ---
+// --- Default Generation Parameters (Updated from image) ---
 export const defaultGenParams = {
     seed: 12345,
-    width: 512,
-    height: 512,
-    numFaults: 200,
-    enableSymmetry: true,
+    width: 2000,       // Updated
+    height: 1000,      // Updated
+    numFaults: 500,    // Updated
+    enableSymmetry: true, // Updated (checked)
+    waterLevel: 104,   // Updated
     smoothing: {
-        iterations: 1,
+        iterations: 2, // Updated
     },
     noise: {
         seed: 54321,
-        octaves: 6,
-        persistence: 0.5,
-        lacunarity: 2.0,
-        scale: 150,
-        strength: 0.1
+        octaves: 12,   // Updated
+        persistence: 0.5, // Updated
+        lacunarity: 2.2, // Updated
+        scale: 400,    // Updated
+        strength: 0.6  // Updated
     }
 };
 
@@ -127,6 +129,8 @@ export function assignElements() {
     paramNoiseLacunarity = document.getElementById('paramNoiseLacunarity');
     paramNoiseScale = document.getElementById('paramNoiseScale');
     paramNoiseStrength = document.getElementById('paramNoiseStrength');
+    paramWaterLevel = document.getElementById('paramWaterLevel'); // Assign water level
+    paramSeedRandomizeButton = document.getElementById('paramSeedRandomizeButton'); // Assign randomize button
     // Other controls
     jsonLoadInput = document.getElementById('jsonLoadInput');
     jsonLoadLabel = document.getElementById('jsonLoadLabel');

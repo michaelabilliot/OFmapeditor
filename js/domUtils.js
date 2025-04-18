@@ -60,9 +60,14 @@ export function populateDynamicElements() {
                     <div class="gen-params-grid">
                         <label for="paramWidth">Width:</label><input type="number" id="paramWidth" min="64" max="4096" step="64" value="${cfg.defaultGenParams.width}">
                         <label for="paramHeight">Height:</label><input type="number" id="paramHeight" min="64" max="4096" step="64" value="${cfg.defaultGenParams.height}">
-                        <label for="paramSeed">Seed:</label><input type="number" id="paramSeed" value="${cfg.defaultGenParams.seed}">
+                        <label for="paramSeed">Seed:</label>
+                        <div class="seed-container">
+                            <input type="number" id="paramSeed" value="${cfg.defaultGenParams.seed}">
+                            <button id="paramSeedRandomizeButton" class="random-seed-btn" title="Randomize Seed">🎲</button>
+                        </div>
                         <label for="paramNumFaults">Faults:</label><input type="number" id="paramNumFaults" min="1" max="10000" value="${cfg.defaultGenParams.numFaults}">
                         <label for="paramEnableSymmetry">Symmetry:</label><input type="checkbox" id="paramEnableSymmetry" ${cfg.defaultGenParams.enableSymmetry ? 'checked' : ''}>
+                        <label for="paramWaterLevel">Water Lvl:</label><input type="number" id="paramWaterLevel" min="0" max="255" step="1" value="${cfg.defaultGenParams.waterLevel}">
 
                         <label for="paramSmoothingIterations">Smooth Iter:</label><input type="number" id="paramSmoothingIterations" min="0" max="10" value="${cfg.defaultGenParams.smoothing.iterations}">
 
@@ -96,9 +101,12 @@ export function populateDynamicElements() {
             .gen-params-details summary { cursor: pointer; padding: 3px 8px; font-weight: 500; font-size: 0.9em; user-select: none; list-style: inside; }
             .gen-params-details summary:hover { background-color: var(--button-hover-bg-color); }
             .gen-params-grid { display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; padding: 10px; background-color: var(--panel-bg-color); border-top: 1px solid var(--border-color); max-width: 350px; }
-            .gen-params-grid label { text-align: right; font-size: 0.85em; white-space: nowrap;}
+            .gen-params-grid label { text-align: right; font-size: 0.85em; white-space: nowrap; align-self: center; }
             .gen-params-grid input { max-width: 80px; padding: 2px 4px; border: 1px solid var(--input-border-color); background-color: var(--input-bg-color); color: var(--text-color); border-radius: 3px; font-size: 0.85em; }
             .gen-params-grid input[type=checkbox] { justify-self: start; }
+            .seed-container { display: flex; align-items: center; gap: 5px; grid-column: 2 / 3; }
+            #paramSeed { flex-grow: 1; max-width: none; }
+            .random-seed-btn { padding: 2px 6px; font-size: 1.1em; line-height: 1; cursor: pointer; background-color: var(--button-bg-color); border: 1px solid var(--border-color); border-radius: 4px; flex-shrink: 0; }
         `;
         document.head.appendChild(style);
     } else { console.error("Cannot populate controls: #controls not found."); }
@@ -110,7 +118,7 @@ export function populateDynamicElements() {
             <p><b>Map Generation:</b></p>
             <ul>
                 <li><span class="highlight">Generate Map:</span> Creates map using current parameters. <span class="highlight">This replaces the map.</span></li>
-                <li><span class="highlight">Generation Params:</span> Click to expand/collapse controls for seed, size, faults, smoothing, noise.</li>
+                <li><span class="highlight">Generation Params:</span> Click to expand/collapse controls for seed, size, faults, <span class="highlight">water level</span>, smoothing, noise.</li>
              </ul>
              <p><b>Project Data:</b></p>
             <ul>
