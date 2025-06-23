@@ -1,3 +1,4 @@
+
 import * as cfg from './config.js';
 import * as domUtils from './domUtils.js';
 import * as canvasUtils from './canvasUtils.js';
@@ -625,4 +626,60 @@ export async function handleFlagEditorClick() {
          await domUtils.showModal('alert', 'Flag Editor Error', `An error occurred: ${error.message}`);
          domUtils.updateStatus(`Error opening/using flag editor: ${error.message}`, true);
     }
+}
+
+// --- NEW: Colorizer Control Events ---
+
+/** Handles changes on the colorization sliders */
+export async function handleColorizerSliderChange() {
+    if (!cfg.originalMapImage || !cfg.mapImage) return;
+
+    // Get current values from sliders
+    const low = parseInt(cfg.lowRangeSlider.value, 10);
+    const mid = parseInt(cfg.midRangeSlider.value, 10);
+    const high = parseInt(cfg.highRangeSlider.value, 10);
+
+    // Update the text display next to sliders
+    if (cfg.lowRangeValue) cfg.lowRangeValue.textContent = low;
+    if (cfg.midRangeValue) cfg.midRangeValue.textContent = mid;
+    if (cfg.highRangeValue) cfg.highRangeValue.textContent = high;
+
+    // Ensure low < mid < high for sensible results
+    if (low >= mid) {
+        cfg.midRangeSlider.value = low + 1;
+        if (cfg.midRangeValue) cfg.midRangeValue.textContent = low + 1;
+    }
+    if (mid >= high) {
+        cfg.highRangeSlider.value = mid + 1;
+        if (cfg.highRangeValue) cfg.highRangeValue.textContent = mid + 1;
+    }
+
+    // Get the final, validated thresholds
+    const thresholds = {
+        low: parseInt(cfg.lowRangeSlider.value, 10),
+        mid: parseInt(cfg.midRangeSlider.value, 10),
+        high: parseInt(cfg.highRangeSlider.value, 10),
+    };
+
+    try {
+        // Re-colorize the ORIGINAL map data with the new thresholds
+        const colorizedDataUrl = await mapUtils.colorizeLoadedMap(cfg.originalMapImage, cfg.mapInfo.fileType, thresholds);
+
+        // Update the source of the main map image.
+        // The onload event will trigger a redraw.
+        cfg.mapImage.onload = () => {
+            canvasUtils.redrawCanvas();
+        };
+        cfg.mapImage.src = colorizedDataUrl;
+
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Unknown colorization error.";
+        domUtils.updateStatus(`Error during re-colorization: ${errorMsg}`, true);
+        console.error("Error during slider-based re-colorization:", error);
+    }
+}
+
+/** Handles the click on the 'Confirm Colors' button */
+export function handleConfirmColorizeClick() {
+    mapUtils.finalizeMapLoad();
 }

@@ -185,6 +185,12 @@ function setupEventListeners() {
     cfg.infoFlagRemoveButton?.addEventListener('click', handlers.handleFlagRemoveClick);
     cfg.editFlagButton?.addEventListener('click', handlers.handleFlagEditorClick); // Modal editor button
 
+    // --- NEW: Colorizer Control Listeners ---
+    cfg.lowRangeSlider?.addEventListener('input', handlers.handleColorizerSliderChange);
+    cfg.midRangeSlider?.addEventListener('input', handlers.handleColorizerSliderChange);
+    cfg.highRangeSlider?.addEventListener('input', handlers.handleColorizerSliderChange);
+    cfg.confirmColorizeBtn?.addEventListener('click', handlers.handleConfirmColorizeClick);
+
     // Global Keyboard Listener
     document.addEventListener('keydown', handlers.handleDocumentKeyDown);
 

@@ -36,6 +36,24 @@
             </div>
             <div id="canvas-top-container">
                 <div id="status">Load a map image to begin...</div>
+                <div id="colorizer-panel" style="display: none;">
+                    <div class="colorizer-slider-group">
+                        <label for="low-range-slider">Plains</label>
+                        <input type="range" id="low-range-slider" min="1" max="254" value="140">
+                        <span id="low-range-value">140</span>
+                    </div>
+                    <div class="colorizer-slider-group">
+                        <label for="mid-range-slider">Highlands</label>
+                        <input type="range" id="mid-range-slider" min="1" max="254" value="178">
+                        <span id="mid-range-value">178</span>
+                    </div>
+                    <div class="colorizer-slider-group">
+                        <label for="high-range-slider">Mountains</label>
+                        <input type="range" id="high-range-slider" min="1" max="254" value="200">
+                        <span id="high-range-value">200</span>
+                    </div>
+                    <button id="confirm-colorize-btn">Confirm Colors</button>
+                </div>
             </div>
             <div id="info-top-container">
                 <div id="zoomControlsContainer">
@@ -88,8 +106,7 @@
 
         <!-- Container for Full Flag Editor View (Initially Hidden) -->
         <div id="full-flag-editor-view" style="display: none;">
-             <!-- Content populated by fullFlagEditor.js -->
-             <!-- Structure will be built by JS, adding a basic placeholder -->
+             <!-- Content populated by fullflagEditor.js -->
              Loading Full Flag Editor...
         </div>
 

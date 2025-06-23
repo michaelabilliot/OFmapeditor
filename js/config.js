@@ -9,6 +9,10 @@ export let infoNameSpan, infoStrengthSpan, infoPlaceholder;
 export let infoFlagPreview, infoFlagStatus, infoFlagUploadInput, infoFlagUploadLabel, infoFlagRemoveButton;
 // NEW: Flag Editor Elements
 export let editFlagButton, flagEditorModalContainer;
+// NEW: Colorizer elements
+export let colorizerPanel, lowRangeSlider, midRangeSlider, highRangeSlider;
+export let lowRangeValue, midRangeValue, highRangeValue, confirmColorizeBtn;
+
 
 export let modalOverlay, modalDialog, modalTitle, modalMessage, modalInputContainer, modalInput, modalButtons, modalOk, modalCancel, modalConfirm, modalDeny;
 export let controlsDiv, instructionsDiv, infoPanel; // Added infoPanel here for export clarity
@@ -20,6 +24,7 @@ let _markerRadius = 8;
 let _nationTextSize = 12;
 let _flagBaseDisplaySize = 30;
 export let nations = []; // { coordinates: [x, y], name: "", strength: 0, flag: "base_name" | null, flagImage: Image | null, flagData: string | null, flagDataType: 'svg' | 'png' | 'jpeg' | 'gif' | 'webp' | null, flagWidth: number | null, flagHeight: number | null }
+export let originalMapImage = null; // Holds the *original* uploaded map image
 export let mapImage = null; // Holds the *colorized* map image
 export let mapInfo = { name: "Untitled Map", width: 0, height: 0, fileName: "", fileType: "image/png" };
 export let selectedNationIndex = null;
@@ -83,6 +88,16 @@ export function assignElements() {
     // NEW: Flag Editor elements
     editFlagButton = document.getElementById('editFlagButton');
     flagEditorModalContainer = document.getElementById('flagEditorModalContainer');
+    
+    // NEW: Assign colorizer elements
+    colorizerPanel = document.getElementById('colorizer-panel');
+    lowRangeSlider = document.getElementById('low-range-slider');
+    midRangeSlider = document.getElementById('mid-range-slider');
+    highRangeSlider = document.getElementById('high-range-slider');
+    lowRangeValue = document.getElementById('low-range-value');
+    midRangeValue = document.getElementById('mid-range-value');
+    highRangeValue = document.getElementById('high-range-value');
+    confirmColorizeBtn = document.getElementById('confirm-colorize-btn');
 
     nationListContainer = document.getElementById('nationListContainer');
     nationListUl = document.getElementById('nationList');
@@ -130,6 +145,7 @@ export function setMarkerRadius(value) { _markerRadius = value; }
 export function setNationTextSize(value) { _nationTextSize = value; }
 export function setFlagBaseDisplaySize(value) { _flagBaseDisplaySize = value; }
 export function setNations(newNations) { nations = newNations; }
+export function setOriginalMapImage(newOriginalMapImage) { originalMapImage = newOriginalMapImage; }
 export function setMapImage(newMapImage) { mapImage = newMapImage; }
 export function setMapInfo(newMapInfo) { mapInfo = newMapInfo; }
 export function setSelectedNationIndex(index) { selectedNationIndex = index; }

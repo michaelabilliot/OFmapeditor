@@ -1,3 +1,4 @@
+
 import * as cfg from './config.js';
 // Import specific functions needed, including mapToCanvasCoords statically
 import { redrawCanvas, mapToCanvasCoords, smoothPanTo } from './canvasUtils.js';
@@ -147,6 +148,12 @@ export function updateZoomDisplay() {
     if (zoomDisplaySpan) {
         zoomDisplaySpan.textContent = `${Math.round(cfg.zoom * 100)}%`;
     }
+}
+
+// NEW: Show/hide colorizer controls
+export function toggleColorizerControls(show) {
+    if (!cfg.colorizerPanel) return;
+    cfg.colorizerPanel.style.display = show ? 'flex' : 'none';
 }
 
 export function updateNationList() {
