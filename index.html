@@ -1,137 +1,200 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenFront Map Editor</title>
     <!-- Load JSZip library (needed globally for saving) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Optional: Load FileSaver.js for more robust downloads -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- NEW: Cropper.js CSS (for Flag Editor) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"
+      rel="stylesheet"
+    />
     <!-- Link to the CSS file -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <!-- Settings Button (always visible) -->
     <button id="settingsButton" title="Toggle Settings Panel">⚙️</button>
 
     <!-- Settings Panel (Populated by JS, visibility toggled) -->
-    <div id="settingsPanel"> <!-- Populated by JS --> </div>
+    <div id="settingsPanel"><!-- Populated by JS --></div>
 
-     <!-- Main Application Container -->
-     <div id="main-container">
-        <!-- Navigation Bar -->
-        <div id="main-nav">
-            <button id="nav-map-editor" class="nav-tab active" aria-current="page">Map Editor</button>
-            <button id="nav-flag-editor" class="nav-tab">Flag Editor</button>
+    <!-- Main Application Container -->
+    <div id="main-container">
+      <!-- Navigation Bar -->
+      <div id="main-nav">
+        <button id="nav-map-editor" class="nav-tab active" aria-current="page">
+          Map Editor
+        </button>
+        <button id="nav-flag-editor" class="nav-tab">Flag Editor</button>
+      </div>
+
+      <!-- Container for Map Editor View -->
+      <div id="map-editor-view">
+        <div id="controls"><!-- Populated by JS --></div>
+        <div id="instr-top-container">
+          <div id="coordinateDisplay">X: ---, Y: ---</div>
         </div>
-
-        <!-- Container for Map Editor View -->
-        <div id="map-editor-view">
-            <div id="controls"> <!-- Populated by JS --> </div>
-            <div id="instr-top-container">
-                 <div id="coordinateDisplay">X: ---, Y: ---</div>
+        <div id="canvas-top-container">
+          <div id="status">Load a map image to begin...</div>
+          <div id="colorizer-panel" style="display: none">
+            <div class="colorizer-slider-group">
+              <label for="low-range-slider">Plains</label>
+              <input
+                type="range"
+                id="low-range-slider"
+                min="1"
+                max="254"
+                value="140"
+              />
+              <span id="low-range-value">140</span>
             </div>
-            <div id="canvas-top-container">
-                <div id="status">Load a map image to begin...</div>
-                <div id="colorizer-panel" style="display: none;">
-                    <div class="colorizer-slider-group">
-                        <label for="low-range-slider">Plains</label>
-                        <input type="range" id="low-range-slider" min="1" max="254" value="140">
-                        <span id="low-range-value">140</span>
-                    </div>
-                    <div class="colorizer-slider-group">
-                        <label for="mid-range-slider">Highlands</label>
-                        <input type="range" id="mid-range-slider" min="1" max="254" value="178">
-                        <span id="mid-range-value">178</span>
-                    </div>
-                    <div class="colorizer-slider-group">
-                        <label for="high-range-slider">Mountains</label>
-                        <input type="range" id="high-range-slider" min="1" max="254" value="200">
-                        <span id="high-range-value">200</span>
-                    </div>
-                    <button id="confirm-colorize-btn">Confirm Colors</button>
-                </div>
+            <div class="colorizer-slider-group">
+              <label for="mid-range-slider">Highlands</label>
+              <input
+                type="range"
+                id="mid-range-slider"
+                min="1"
+                max="254"
+                value="178"
+              />
+              <span id="mid-range-value">178</span>
             </div>
-            <div id="info-top-container">
-                <div id="zoomControlsContainer">
-                     <button id="zoomOutButton" title="Zoom Out (-)">-</button>
-                     <span id="zoomDisplay">100%</span>
-                     <button id="zoomInButton" title="Zoom In (+)">+</button>
-                     <button id="zoomResetButton" title="Reset View (0)">Reset</button>
-                </div>
+            <div class="colorizer-slider-group">
+              <label for="high-range-slider">Mountains</label>
+              <input
+                type="range"
+                id="high-range-slider"
+                min="1"
+                max="254"
+                value="200"
+              />
+              <span id="high-range-value">200</span>
             </div>
-                <div id="instructions"> <!-- Populated by JS --> </div>
-                <div id="canvas-container">
-                    <canvas id="mapCanvas" tabindex="0">
-                        Your browser does not support the HTML5 canvas element.
-                    </canvas>
-                     <div id="inlineEditPanel">
-                         <label for="inlineEditName">Name:</label>
-                         <input type="text" id="inlineEditName">
-                         <label for="inlineEditStrength">Strength:</label>
-                         <input type="number" id="inlineEditStrength" min="0">
-                         <div>
-                            <button id="inlineEditSave">Save</button>
-                            <button id="inlineEditCancel">Cancel</button>
-                         </div>
-                     </div>
-                </div>
-                <div id="info-panel">
-                     <h3>Nation Info</h3>
-                     <div id="info-content">
-                         <div id="info-flag-container">
-                             <img id="info-flag-preview" src="#" alt="Nation Flag Preview">
-                             <p id="info-flag-status">Flag status placeholder</p>
-                             <div id="info-flag-controls">
-                                 <input type="file" id="info-flag-upload-input" class="visually-hidden" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml, .png, .jpg, .jpeg, .gif, .webp, .svg">
-                                 <label for="info-flag-upload-input" id="info-flag-upload-label" class="file-label-button" data-disabled="true" title="Upload flag image (PNG or SVG)">Upload Flag</label>
-                                 <button id="info-flag-remove-button" disabled title="Remove current flag">✖ Remove</button>
-                                 <button id="editFlagButton" class="btn-secondary-small" disabled title="Edit flag appearance">Flag Editor</button>
-                             </div>
-                         </div>
-                         <p><strong>Name:</strong> <span id="info-name">--</span></p>
-                         <p><strong>Strength:</strong> <span id="info-strength">--</span></p>
-                         <p id="info-placeholder"><small><i>Select a nation on the map or list to see details.</i></small></p>
-                     </div>
-                     <hr>
-                     <h4>Nation List (<span id="nationListCount">0</span>)</h4>
-                     <div id="nationListContainer">
-                        <ul id="nationList"> <!-- List items populated by JS --> </ul>
-                     </div>
-                 </div>
-        </div> <!-- End of map-editor-view -->
-
-        <!-- Container for Full Flag Editor View (Initially Hidden) -->
-        <div id="full-flag-editor-view" style="display: none;">
-             <!-- Content populated by fullflagEditor.js -->
-             Loading Full Flag Editor...
+            <button id="confirm-colorize-btn">Confirm Colors</button>
+          </div>
         </div>
+        <div id="info-top-container">
+          <div id="zoomControlsContainer">
+            <button id="zoomOutButton" title="Zoom Out (-)">-</button>
+            <span id="zoomDisplay">100%</span>
+            <button id="zoomInButton" title="Zoom In (+)">+</button>
+            <button id="zoomResetButton" title="Reset View (0)">Reset</button>
+          </div>
+        </div>
+        <div id="instructions"><!-- Populated by JS --></div>
+        <div id="canvas-container">
+          <canvas id="mapCanvas" tabindex="0">
+            Your browser does not support the HTML5 canvas element.
+          </canvas>
+          <div id="inlineEditPanel">
+            <label for="inlineEditName">Name:</label>
+            <input type="text" id="inlineEditName" />
+            <label for="inlineEditStrength">Strength:</label>
+            <input type="number" id="inlineEditStrength" min="0" />
+            <div>
+              <button id="inlineEditSave">Save</button>
+              <button id="inlineEditCancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div id="info-panel">
+          <h3>Nation Info</h3>
+          <div id="info-content">
+            <div id="info-flag-container">
+              <img id="info-flag-preview" src="#" alt="Nation Flag Preview" />
+              <p id="info-flag-status">Flag status placeholder</p>
+              <div id="info-flag-controls">
+                <input
+                  type="file"
+                  id="info-flag-upload-input"
+                  class="visually-hidden"
+                  accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml, .png, .jpg, .jpeg, .gif, .webp, .svg"
+                />
+                <label
+                  for="info-flag-upload-input"
+                  id="info-flag-upload-label"
+                  class="file-label-button"
+                  data-disabled="true"
+                  title="Upload flag image (PNG or SVG)"
+                  >Upload Flag</label
+                >
+                <button
+                  id="info-flag-remove-button"
+                  disabled
+                  title="Remove current flag"
+                >
+                  ✖ Remove
+                </button>
+                <button
+                  id="editFlagButton"
+                  class="btn-secondary-small"
+                  disabled
+                  title="Edit flag appearance"
+                >
+                  Flag Editor
+                </button>
+              </div>
+            </div>
+            <p><strong>Name:</strong> <span id="info-name">--</span></p>
+            <p><strong>Strength:</strong> <span id="info-strength">--</span></p>
+            <p id="info-placeholder">
+              <small
+                ><i
+                  >Select a nation on the map or list to see details.</i
+                ></small
+              >
+            </p>
+          </div>
+          <hr />
+          <h4>Nation List (<span id="nationListCount">0</span>)</h4>
+          <div id="nationListContainer">
+            <ul id="nationList">
+              <!-- List items populated by JS -->
+            </ul>
+          </div>
+        </div>
+      </div>
+      <!-- End of map-editor-view -->
 
-    </div> <!-- End of main-container -->
+      <!-- Container for Full Flag Editor View (Initially Hidden) -->
+      <div id="full-flag-editor-view" style="display: none">
+        <!-- Content populated by fullflagEditor.js -->
+        Loading Full Flag Editor...
+      </div>
+    </div>
+    <!-- End of main-container -->
 
     <!-- Modal Structure (Hidden by default) -->
     <div id="modal-overlay">
-        <div id="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-message">
-            <h3 id="modal-title">Modal Title</h3>
-            <p id="modal-message">Modal message goes here.</p>
-            <div id="modal-input-container" style="display: none;">
-                <input type="text" id="modal-input" aria-label="Input for prompt">
-            </div>
-            <div id="modal-buttons">
-                <button id="modal-cancel" style="display: none;">Cancel</button>
-                <button id="modal-deny" style="display: none;">No</button>
-                <button id="modal-confirm" style="display: none;">Yes</button>
-                <button id="modal-ok">OK</button>
-            </div>
+      <div
+        id="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-message"
+      >
+        <h3 id="modal-title">Modal Title</h3>
+        <p id="modal-message">Modal message goes here.</p>
+        <div id="modal-input-container" style="display: none">
+          <input type="text" id="modal-input" aria-label="Input for prompt" />
         </div>
+        <div id="modal-buttons">
+          <button id="modal-cancel" style="display: none">Cancel</button>
+          <button id="modal-deny" style="display: none">No</button>
+          <button id="modal-confirm" style="display: none">Yes</button>
+          <button id="modal-ok">OK</button>
+        </div>
+      </div>
     </div>
 
     <!-- Flag Editor Modal Placeholder (Hidden by default - for Map Editor) -->
     <div id="flagEditorModalContainer" class="flag-editor-modal-overlay">
-        <!-- Content will be populated by flagEditor.js -->
+      <!-- Content will be populated by flagEditor.js -->
     </div>
 
     <!-- Libraries -->
@@ -141,8 +204,9 @@
 
     <!-- Load the main JavaScript modules -->
     <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/flagEditor.js"></script> <!-- Modal editor -->
-    <script type="module" src="js/fullflagEditor.js"></script> <!-- Full page editor -->
-
-</body>
+    <script type="module" src="js/flagEditor.js"></script>
+    <!-- Modal editor -->
+    <script type="module" src="js/fullflagEditor.js"></script>
+    <!-- Full page editor -->
+  </body>
 </html>
